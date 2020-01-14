@@ -9,7 +9,7 @@ namespace runasfromfile
             if (args.Length > 0) {
                 cat(args[0]);
             } else {
-                System.Console.WriteLine("Please give a file name as argument");
+                Console.WriteLine("Please give a file name as argument");
             }
         }
 
@@ -22,7 +22,7 @@ namespace runasfromfile
 
         static string ButFirst(string x)
         {
-            string[] parts = x.Split(" \t".ToCharArray(), 2);
+            var parts = x.Split(" \t".ToCharArray(), 2);
             return parts[1].Trim();
         }
 
@@ -32,7 +32,7 @@ namespace runasfromfile
             string username = null;
             string password = null;
 
-            using(System.IO.StreamReader file =
+            using(var file =
                   new System.IO.StreamReader(arg)) {
                 while((line = file.ReadLine()) != null)
                 {
@@ -41,17 +41,17 @@ namespace runasfromfile
                     } else if (MatchHeaderAndNullValue(line, "password", password)) {
                         password = ButFirst(line);
                     } else {
-                        System.Console.WriteLine(line);
+                        Console.WriteLine(line);
                     }
                 }
                 if ((null != username) && (null != password)) {
-                    System.Console.WriteLine(username + ":" + password);
+                    Console.WriteLine(username + ":" + password);
                 } else if ((null == username) && (null == password)) {
-                    System.Console.WriteLine("Neither username nor password found in " + arg);
+                    Console.WriteLine("Neither username nor password found in " + arg);
                 } else if (null != password) {
-                    System.Console.WriteLine("Password found: " + new String('*', password.Length));
+                    Console.WriteLine("Password found: " + new String('*', password.Length));
                 } else if (null != username) {
-                    System.Console.WriteLine("Username found: " + username);
+                    Console.WriteLine("Username found: " + username);
                 }
             }
         }
