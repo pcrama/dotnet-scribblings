@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace runasfromfile
 {
@@ -13,9 +14,9 @@ namespace runasfromfile
             }
         }
 
-        static bool MatchHeaderAndNullValue(string line, string header, string value)
+        static bool MatchHeaderAndNotSet(string line, string header, SetOnce<string> value)
         {
-            return ((null == value)
+            return (value.NotSet
                     && line.StartsWith(header,
                                        StringComparison.CurrentCultureIgnoreCase));
         }
@@ -28,32 +29,67 @@ namespace runasfromfile
 
         static void cat(string arg)
         {
-            string line;
-            string username = null;
-            string password = null;
+            const string USERNAME = "username";
+            const string PASSWORD = "password";
+            var data = new Dictionary<string, SetOnce<string>>();
+            data.Add(USERNAME, new SetOnce<string>());
+            data.Add(PASSWORD, new SetOnce<string>());
 
             using(var file =
                   new System.IO.StreamReader(arg)) {
+                string line;
                 while((line = file.ReadLine()) != null)
                 {
-                    if (MatchHeaderAndNullValue(line, "username", username)) {
-                        username = ButFirst(line);
-                    } else if (MatchHeaderAndNullValue(line, "password", password)) {
-                        password = ButFirst(line);
-                    } else {
-                        Console.WriteLine(line);
+                    foreach (var item in data)
+                    {
+                        if (MatchHeaderAndNotSet(line, item.Key, item.Value)) {
+                            item.Value.Set(ButFirst(line));
+                            break;
+                        }
                     }
                 }
-                if ((null != username) && (null != password)) {
-                    Console.WriteLine(username + ":" + password);
-                } else if ((null == username) && (null == password)) {
+                var username = data[USERNAME];
+                var password = data[PASSWORD];
+                if (username.NotSet && password.NotSet) {
                     Console.WriteLine("Neither username nor password found in " + arg);
-                } else if (null != password) {
-                    Console.WriteLine("Password found: " + new String('*', password.Length));
-                } else if (null != username) {
-                    Console.WriteLine("Username found: " + username);
+                } else if (password.IsSet) {
+                    Console.WriteLine("Password found: " + new String('*', password.Value.Length));
+                } else if (username.IsSet) {
+                    Console.WriteLine("Username found: " + username.Value);
+                } else {
+                    Console.WriteLine(username.Value + ":" + password.Value);
                 }
             }
+        }
+    }
+
+    class SetOnce<T> {
+        public bool NotSet {
+            get { return !IsSet; }
+            private set { IsSet = !value; }
+        }
+        public bool IsSet { get; private set; }
+        public T Value { get; private set; }
+        public SetOnce()
+        {
+            IsSet = false;
+            Value = default(T);
+        }
+
+        public SetOnce(T v)
+        {
+            IsSet = true;
+            Value = v;
+        }
+
+        public SetOnce<T> Set(T v)
+        {
+            if (NotSet)
+            {
+                IsSet = true;
+                Value = v;
+            }
+            return this;
         }
     }
 }
