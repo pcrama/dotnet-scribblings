@@ -1,38 +1,54 @@
-/* Moved into a gist for usage in smallcliutils (
- * see https://github.com/pcrama/scoop-buckets/)
- *     https://gist.github.com/pcrama/a0480922ba7e4a0082c50a97335011f0/raw/34833a83013b023362015ddf1475ea0e6a104fb7/RunAsFromFile.cs
- */
+// <copyright file="Program.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics; // System.Diagnostics.Process.dll
-using System.Security;
-
-namespace runasfromfile
+namespace RunAsFromFile
 {
-    class Program
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics; // System.Diagnostics.Process.dll
+
+    /// <summary>
+    ///   Read credentials from a plain text file and start a process as that user.
+    /// </summary>
+    /// <remarks>
+    ///   <para>
+    ///     Moved into a gist for usage in smallcliutils (see
+    ///     https://github.com/pcrama/scoop-buckets/):
+    ///     https://gist.github.com/pcrama/a0480922ba7e4a0082c50a97335011f0/.
+    ///   </para>
+    /// </remarks>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        ///   Program entry point: validate command line args and start processing them.
+        /// </summary>
+        /// <param name="args">Command line arguments.</param>
+        public static void Main(string[] args)
         {
-            if (args.Length > 1) {
+            if (args.Length > 1)
+            {
                 var commandLine = new ArraySegment<string>(args, 1, args.Length - 1);
-                cat(args[0],
+                Cat(
+                    args[0],
                     (u, p) => { StartProcessAs(commandLine, u, p); });
-            } else {
+            }
+            else
+            {
                 Console.WriteLine("Please give a file name and a command as arguments");
             }
         }
 
-        static void SplitUserAndDomain(string fullUserName, out string domain, out string user)
+        private static void SplitUserAndDomain(string fullUserName, out string domain, out string user)
         {
             var defaultDomain = System.Environment.MachineName;
             var parts = fullUserName.Split('\\');
-            if (1 == parts.Length)
+            if (parts.Length == 1)
             {
                 domain = defaultDomain;
                 user = fullUserName;
             }
-            else if ("." == parts[0])
+            else if (parts[0] == ".")
             {
                 domain = defaultDomain;
                 user = parts[1];
@@ -44,12 +60,12 @@ namespace runasfromfile
             }
         }
 
-        static void StartProcessAs(ArraySegment<string> cmdLine, string fullUserName, string password)
+        private static void StartProcessAs(ArraySegment<string> cmdLine, string fullUserName, string password)
         {
             var startInfo = new ProcessStartInfo();
             startInfo.UseShellExecute = false;
             startInfo.FileName = cmdLine.Array[cmdLine.Offset];
-            startInfo.Arguments = String.Join(" ", cmdLine.Array, cmdLine.Offset + 1, cmdLine.Count - 1);
+            startInfo.Arguments = string.Join(" ", cmdLine.Array, cmdLine.Offset + 1, cmdLine.Count - 1);
             string domain, user;
             SplitUserAndDomain(fullUserName, out domain, out user);
             startInfo.Domain = domain;
@@ -59,20 +75,24 @@ namespace runasfromfile
             var proc = Process.Start(startInfo);
         }
 
-        static bool MatchHeaderAndNotSet(string line, string header, SetOnce<string> value)
+        /// <summary>
+        ///   Checks that a line starts with given header and value has not been set before.
+        /// </summary>
+        private static bool MatchHeaderAndNotSet(string line, string header, SetOnce<string> value)
         {
-            return (value.NotSet
-                    && line.StartsWith(header,
-                                       StringComparison.CurrentCultureIgnoreCase));
+            return value.NotSet
+                && line.StartsWith(
+                    header,
+                    StringComparison.CurrentCultureIgnoreCase);
         }
 
-        static string ButFirst(string x)
+        private static string ButFirst(string x)
         {
             var parts = x.Split(" \t".ToCharArray(), 2);
             return parts[1].Trim();
         }
 
-        static void cat(string arg, Action<string, string> callWithCredentials)
+        private static void Cat(string arg, Action<string, string> callWithCredentials)
         {
             const string USERNAME = "username";
             const string PASSWORD = "password";
@@ -80,63 +100,45 @@ namespace runasfromfile
             data.Add(USERNAME, new SetOnce<string>());
             data.Add(PASSWORD, new SetOnce<string>());
 
-            using(var file =
-                  new System.IO.StreamReader(arg)) {
+            using (var file =
+                  new System.IO.StreamReader(arg))
+                  {
                 string line;
-                while((line = file.ReadLine()) != null)
+                while ((line = file.ReadLine()) != null)
                 {
                     foreach (var item in data)
                     {
-                        if (MatchHeaderAndNotSet(line, item.Key, item.Value)) {
+                        if (MatchHeaderAndNotSet(line, item.Key, item.Value))
+                        {
                             item.Value.Set(ButFirst(line));
                             break;
                         }
                     }
                 }
+
                 var username = data[USERNAME];
                 var password = data[PASSWORD];
-                if (username.IsSet && password.IsSet) {
+                if (username.IsSet && password.IsSet)
+                {
                     callWithCredentials(username.Value, password.Value);
-                } else if (username.NotSet && password.NotSet) {
+                }
+                else if (username.NotSet && password.NotSet)
+                {
                     Console.WriteLine("Neither username nor password found in " + arg);
-                } else if (password.IsSet) {
-                    Console.WriteLine("Password found: " + new String('*', password.Value.Length));
-                } else if (username.IsSet) {
+                }
+                else if (password.IsSet)
+                {
+                    Console.WriteLine("Password found: " + new string('*', password.Value.Length));
+                }
+                else if (username.IsSet)
+                {
                     Console.WriteLine("Username found: " + username.Value);
-                } else {
+                }
+                else
+                {
                     Console.WriteLine("This case should not occur");
                 }
             }
-        }
-    }
-
-    class SetOnce<T> {
-        public bool NotSet {
-            get { return !IsSet; }
-            private set { IsSet = !value; }
-        }
-        public bool IsSet { get; private set; }
-        public T Value { get; private set; }
-        public SetOnce()
-        {
-            IsSet = false;
-            Value = default(T);
-        }
-
-        public SetOnce(T v)
-        {
-            IsSet = true;
-            Value = v;
-        }
-
-        public SetOnce<T> Set(T v)
-        {
-            if (NotSet)
-            {
-                IsSet = true;
-                Value = v;
-            }
-            return this;
         }
     }
 }
