@@ -2,11 +2,14 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+[assembly: System.Resources.NeutralResourcesLanguage("en-US")]
+
 namespace RunAsFromFile
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics; // System.Diagnostics.Process.dll
+    using runasfromfile.Properties;
 
     /// <summary>
     ///   Read credentials from a plain text file and start a process as that user.
@@ -18,7 +21,7 @@ namespace RunAsFromFile
     ///     https://gist.github.com/pcrama/a0480922ba7e4a0082c50a97335011f0/.
     ///   </para>
     /// </remarks>
-    public class Program
+    public static class Program
     {
         /// <summary>
         ///   Program entry point: validate command line args and start processing them.
@@ -26,7 +29,12 @@ namespace RunAsFromFile
         /// <param name="args">Command line arguments.</param>
         public static void Main(string[] args)
         {
-            if (args.Length > 1)
+if (args == null)
+            {
+                throw new ArgumentNullException(nameof(args));
+            }
+
+if (args.Length > 1)
             {
                 var commandLine = new ArraySegment<string>(args, 1, args.Length - 1);
                 Cat(
@@ -35,7 +43,7 @@ namespace RunAsFromFile
             }
             else
             {
-                Console.WriteLine("Please give a file name and a command as arguments");
+                Console.WriteLine(Resources.CommandLineArgumentError);
             }
         }
 
@@ -124,19 +132,19 @@ namespace RunAsFromFile
                 }
                 else if (username.NotSet && password.NotSet)
                 {
-                    Console.WriteLine("Neither username nor password found in " + arg);
+                    Console.WriteLine(Resources.NoUsernameNorPasswordFound + arg);
                 }
                 else if (password.IsSet)
                 {
-                    Console.WriteLine("Password found: " + new string('*', password.Value.Length));
+                    Console.WriteLine(Resources.PasswordFound + new string('*', password.Value.Length));
                 }
                 else if (username.IsSet)
                 {
-                    Console.WriteLine("Username found: " + username.Value);
+                    Console.WriteLine(Resources.UsernameFound + username.Value);
                 }
                 else
                 {
-                    Console.WriteLine("This case should not occur");
+                    Console.WriteLine(Resources.NotReached);
                 }
             }
         }
