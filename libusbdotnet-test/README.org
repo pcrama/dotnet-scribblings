@@ -1,0 +1,21 @@
+* Introduction
+
+This started as a copy of the [[https://github.com/LibUsbDotNet/LibUsbDotNet/tree/master/src/Examples/][Read.Write Example]] from [[https://github.com/LibUsbDotNet/LibUsbDotNet][LibUsbDotNet]] to
+experiment with USB devices and C#.  I also looked at [[https://github.com/LibUsbDotNet/LibUsbDotNet/tree/master/src/Test_Info][Test_Info]].
+
+* Setup
+
+Note that I use the alpha version of the library because I am browsing their
+example code on the master branch and the examples do not compile with the
+current released version 2.2.29.
+#+begin_src shell :exports code
+  dotnet new console -o libusbdotnet-test
+  cd libusbdotnet-test
+  dotnet add package LibUsbDotNet --version 3.0.48-alpha
+#+end_src
+
+Because I also want to experiment a bit with the linting tools:
+#+begin_src shell :exports code
+  dotnet add package Microsoft.CodeAnalysis.FxCopAnalyzers
+  dotnet add package StyleCop.Analyzers
+#+end_src

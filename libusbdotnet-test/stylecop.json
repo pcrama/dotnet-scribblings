@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DotNetAnalyzers/StyleCopAnalyzers/master/StyleCop.Analyzers/StyleCop.Analyzers/Settings/stylecop.schema.json"
+    "settings": {
+        "orderingRules": {
+            "elementOrder" : [ "kind", "accessibility", "constant", "static", "readonly" ],
+            "usingDirectivesPlacement": "outsideNamespace",
+            "systemUsingDirectivesFirst": true,
+            "blankLinesBetweenUsingGroups": "allow"
+        },
+        "documentationRules": {
+            "companyName": "Philippe Crama",
+            "copyrightText": "Copyright (c) {companyName}. All rights reserved.\nLicensed under the {licenseName} license. See {licenseFile} file for full license information.",
+            "variables": {
+                "licenseName": "GPLv3",
+                "licenseFile": "LICENSE"
+            },
+            "documentInterfaces": true,
+            "documentExposedElements": true,
+            "documentInternalElements": false,
+            "documentPrivateElements": false,
+            "documentPrivateFields"; false
+        }
+    }
+}
