@@ -13,11 +13,33 @@ namespace LibusbdotnetTest
 
     internal static class Program
     {
-        // My mouse's product ID:
-        private const int ProductId = 0xc077;
+        private class VendorProductIdPair {
+            public int VendorId { get; private set; }
+            public int ProductId { get; private set; }
+            public VendorProductIdPair(int vendor, int product)
+            {
+                this.VendorId = vendor;
+                this.ProductId = product;
+            }
+        }
 
-        // My mouse's vendor ID:
-        private const int VendorId = 0x046d;
+        private static VendorProductIdPair[] DeviceIds = {
+            new VendorProductIdPair(vendor: 0x16c0, product: 0x0486),
+            new VendorProductIdPair(vendor: 0x1d50, product: 0x60fc)
+        };
+
+        private static bool IdentifyOnlyKey(IUsbDevice d)
+        {
+            foreach (var p in DeviceIds)
+            {
+                if ((p.VendorId == d.VendorId) && (p.ProductId == d.ProductId))
+                {
+                    var info = d.Info;
+                    return info.SerialNumber == "1000000000";
+                }
+            }
+            return false;
+        }
 
         public static void Main(string[] args)
         {
@@ -51,14 +73,18 @@ namespace LibusbdotnetTest
                 }
 
                 // Narrow down the device by vendor and pid
-                var selectedDevice = usbDeviceCollection.FirstOrDefault(d => d.ProductId == ProductId && d.VendorId == VendorId);
+                var selectedDevice = usbDeviceCollection.FirstOrDefault(IdentifyOnlyKey);
                 if (selectedDevice == null)
                 {
-                    Console.WriteLine("Ohoh, selectedDevice PID={0:X4} VID={1:X4} is null", ProductId, VendorId);
+                    Console.WriteLine("Ohoh, selectedDevice is null");
+                    return;
                 }
                 else
                 {
-                    Console.WriteLine("selectedDevice PID={0:X4} VID={1:X4} found", ProductId, VendorId);
+                    Console.WriteLine(
+                        "selectedDevice PID={0:X4} VID={1:X4} found",
+                        selectedDevice.ProductId,
+                        selectedDevice.VendorId);
                 }
 
                 // Open the device

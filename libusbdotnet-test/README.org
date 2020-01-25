@@ -19,3 +19,7 @@ Because I also want to experiment a bit with the linting tools:
   dotnet add package Microsoft.CodeAnalysis.FxCopAnalyzers
   dotnet add package StyleCop.Analyzers
 #+end_src
+
+* USB projects
+- [[http://www.florian-leitner.de/index.php/projects/usb-hid-driver-library/][USB HID Driver Library]] by Florian Leitner
+- [[https://github.com/mikeobrien/HidLibrary][HID Library]] by Mike O'Brien
