@@ -4,14 +4,9 @@ This started as a copy of the [[https://github.com/LibUsbDotNet/LibUsbDotNet/tre
 experiment with USB devices and C#.  I also looked at [[https://github.com/LibUsbDotNet/LibUsbDotNet/tree/master/src/Test_Info][Test_Info]].
 
 * Setup
-
-Note that I use the alpha version of the library because I am browsing their
-example code on the master branch and the examples do not compile with the
-current released version 2.2.29.
 #+begin_src shell :exports code
   dotnet new console -o libusbdotnet-test
   cd libusbdotnet-test
-  dotnet add package LibUsbDotNet --version 3.0.48-alpha
 #+end_src
 
 Because I also want to experiment a bit with the linting tools:
@@ -20,6 +15,27 @@ Because I also want to experiment a bit with the linting tools:
   dotnet add package StyleCop.Analyzers
 #+end_src
 
+I downloaded and extracted ~Assemblies/rawhid.dll~ from [[https://forum.pjrc.com/attachment.php?attachmentid=1328&d=1390621879][this link]] (full forum
+post attachment: [[file:rawhidcSharp.zip][rawhidcSharp.zip]]).  It contained this text
+#+begin_quote
+  I had some issues when trying to connect my teensy 2.0 via rawhid to a c# assembly. If anyone else wanted to accomplish the same task, my included source may be of some assistance...
+
+  Here is the command to compile the rawhid.dll.:
+
+  $ gcc -shared -o rawhid.dll -DBUILD_DLL hid_WINDOWS.c -lsetupapi -lhid
+#+end_quote
+There is also this [[https://github.com/NicoHood/HID/tree/master/extras/rawhid][HID]] project on GitHub that contains rawhid source code for
+other platforms.
+
+See also [[https://stackoverflow.com/questions/26682696/how-to-pass-a-buffer-of-binary-data-from-c-to-c-sharp-with-pinvoke][StackOverflow question about binary buffers]] or [[https://stackoverflow.com/questions/16208592/c-sharp-p-invoke-and-array-of-structs-containing-byte-arrays][this]].
+
+This being a 32bit library, I needed the [[https://dotnet.microsoft.com/download/dotnet-core/thank-you/sdk-3.1.101-windows-x86-installer][32bit dotnet runtime]].
+
 * USB projects
 - [[http://www.florian-leitner.de/index.php/projects/usb-hid-driver-library/][USB HID Driver Library]] by Florian Leitner
 - [[https://github.com/mikeobrien/HidLibrary][HID Library]] by Mike O'Brien
+- C# wrappers for [[https://github.com/signal11/hidapi][hidapi]]:
+  - [[https://github.com/temach/HIDInterface][temach/HIDInterface]] looks more serious/complete/complex
+  - [[https://github.com/miguel28/HIDInterface][miguel28/HIDInterface]] looks like it could serve as inspiration for bare
+    bones wrapper.  Also contains what look like releases of hidapi.dll for 64
+    & 32 bit.
