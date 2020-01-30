@@ -44,6 +44,7 @@ namespace LibusbdotnetTest
                         return false;
                     }
                 }
+
                 Console.WriteLine($"found {r} rawhid device\n");
                 return true;
             }
@@ -51,6 +52,7 @@ namespace LibusbdotnetTest
             {
                 Console.WriteLine(exc.ToString());
             }
+
             return false;
         }
     }
