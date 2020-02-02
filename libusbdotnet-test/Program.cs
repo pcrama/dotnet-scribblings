@@ -4,7 +4,9 @@
 // </copyright>
 namespace LibusbdotnetTest
 {
+    // See https://stackoverflow.com/a/957544 for how to access linked list
     using System;
+    using System.Runtime.InteropServices;
     using System.Text;
 
     internal static class Program
@@ -31,6 +33,8 @@ namespace LibusbdotnetTest
                 Console.WriteLine("Success opening HidApi");
                 try
                 {
+                    EnumerateHid(0);
+                    EnumerateHid(1);
                     DoSomethingWithHid();
                 }
                 finally
@@ -48,6 +52,53 @@ namespace LibusbdotnetTest
             else
             {
                 Console.WriteLine("Abysmal failure");
+            }
+        }
+
+        private static void EnumerateHid(int idx)
+        {
+            var first = HidApi.hid_enumerate(deviceIds[idx].VendorId, deviceIds[idx].ProductId);
+            if (first == IntPtr.Zero)
+            {
+                Console.WriteLine(
+                    "hid_enumerate({0:X4}, {1:X4}) returned null",
+                    deviceIds[idx].VendorId,
+                    deviceIds[idx].ProductId);
+                return;
+            }
+
+            try
+            {
+                var hid = (HidApi.hid_device_info)Marshal.PtrToStructure(first, typeof(HidApi.hid_device_info));
+                while (hid != null)
+                {
+                    Console.WriteLine(
+                        "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
+                        hid.path,
+                        hid.vendor_id,
+                        hid.product_id,
+                        hid.serial_number,
+                        hid.manufacturer_string,
+                        hid.product_string,
+                        hid.usage_page,
+                        hid.usage,
+                        hid.interface_number
+                        );
+                    hid = (HidApi.hid_device_info)Marshal.PtrToStructure(hid.next, typeof(HidApi.hid_device_info));
+                }
+            }
+            finally
+            {
+                if (first != null)
+                {
+                    Console.WriteLine("Trying to free enumeration");
+                    HidApi.hid_free_enumeration(first);
+                    Console.WriteLine("enumeration freed");
+                }
+                else
+                {
+                    Console.WriteLine("Nothing to free");
+                }
             }
         }
 

@@ -1,5 +1,3 @@
-// Downloaded from https://github.com/temach/HIDInterface/raw/master/USBInterface/HidApi.cs
-// and using dlls downloaded from https://github.com/miguel28/HIDInterface/tree/master/USBInterface
 namespace LibusbdotnetTest
 {
     ﻿using System;
@@ -150,6 +148,46 @@ namespace LibusbdotnetTest
 
 
 
+        #endregion
+
+        #region Data types
+        /** hidapi info structure */
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        public class hid_device_info {
+            /** Platform-specific device path */
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string path = null;
+            /** Device Vendor ID */
+            public ushort vendor_id = 0;
+            /** Device Product ID */
+            public ushort product_id = 0;
+            /** Serial Number */
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string serial_number = null;
+            /** Device Release Number in binary-coded decimal,
+                also known as Device Version Number */
+            public ushort release_number = 0;
+            /** Manufacturer String */
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string manufacturer_string = null;
+            /** Product string */
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string product_string = null;
+            /** Usage Page for this Device/Interface
+                (Windows/Mac only). */
+            public ushort usage_page = 0;
+            /** Usage for this Device/Interface
+                (Windows/Mac only).*/
+            public ushort usage = 0;
+            /** The USB interface which this logical device
+                represents. Valid on both Linux implementations
+                in all cases, and valid on the Windows implementation
+                only if the device contains more than one interface. */
+            public int interface_number = 0;
+
+            /** Pointer to the next device */
+            public IntPtr next = IntPtr.Zero;
+        };
         #endregion
     }
 }
