@@ -17,7 +17,7 @@ namespace LibusbdotnetTest
             new VendorProductIdPair(vendor: 0x1d50, product: 0x60fc),
         };
 
-        public static void Main(string[] args)
+        public static void Main()
         {
             string[] testSlots = { "a", "b" };
             using (var onlyKey = new HardwareOnlyKey())
@@ -70,7 +70,7 @@ namespace LibusbdotnetTest
             try
             {
                 var hid = (HidApi.hid_device_info)Marshal.PtrToStructure(first, typeof(HidApi.hid_device_info));
-                while (hid != null)
+                while (true)
                 {
                     Console.WriteLine(
                         "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
@@ -82,9 +82,15 @@ namespace LibusbdotnetTest
                         hid.product_string,
                         hid.usage_page,
                         hid.usage,
-                        hid.interface_number
-                        );
-                    hid = (HidApi.hid_device_info)Marshal.PtrToStructure(hid.next, typeof(HidApi.hid_device_info));
+                        hid.interface_number);
+                    if (hid.next == IntPtr.Zero)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        hid = (HidApi.hid_device_info)Marshal.PtrToStructure(hid.next, typeof(HidApi.hid_device_info));
+                    }
                 }
             }
             finally

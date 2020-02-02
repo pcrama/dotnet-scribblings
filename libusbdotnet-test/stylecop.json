@@ -10,6 +10,7 @@
         "documentationRules": {
             "companyName": "Philippe Crama",
             "copyrightText": "Copyright (c) {companyName}. All rights reserved.\nLicensed under the {licenseName} license. See {licenseFile} file for full license information.",
+            "xmlHeader": true,
             "variables": {
                 "licenseName": "GPLv3",
                 "licenseFile": "LICENSE"

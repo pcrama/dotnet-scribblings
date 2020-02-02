@@ -1,0 +1,2 @@
+[*.cs]
+dotnet_code_quality.CA1303.excluded_type_names_with_derived_types = Program|HardwareOnlyKey|NativeMethods
