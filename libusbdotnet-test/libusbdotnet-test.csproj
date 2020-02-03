@@ -21,4 +21,13 @@
     <AdditionalFiles Include="stylecop.json" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!--
+      Make sure any documentation comments which are included in code get checked for syntax during the build
+    -->
+    <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
+    <NoWin32Manifest>true</NoWin32Manifest>
+    <StartupObject></StartupObject>
+  </PropertyGroup>
+
 </Project>

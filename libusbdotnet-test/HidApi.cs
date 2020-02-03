@@ -35,115 +35,118 @@ namespace LibusbdotnetTest
         // next to this source file
         public const string DllFileName = "hidapi";
 
-        /// Return Type: int
+        /// <returns>Status code <c>int</c>.</returns>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_init();
 
-        /// Return Type: int
+        /// <returns>Status code <c>int</c>.</returns>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_exit();
 
-        /// Return Type: hid_device_info*
-        ///vendor_id: unsigned short
-        ///product_id: unsigned short
+        /// <returns><c>hid_device_info*</c>.</returns>
+        /// <param name="vendor_id">Vendor ID as <c>unsigned short</c>.</param>
+        /// <param name="product_id">Product ID as <c>unsigned short</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr hid_enumerate(ushort vendor_id, ushort product_id);
 
-        /// Return Type: void
-        ///devs: struct hid_device_info*
+        /// <param name="devs"><c>struct hid_device_info*</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void hid_free_enumeration(IntPtr devs);
 
-        /// Return Type: hid_device*
-        ///vendor_id: unsigned short
-        ///product_id: unsigned short
-        ///serial_number: wchar_t*
-        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
+        /// <returns><c>hid_device*</c>.</returns>
+        /// <param name="vendor_id">Vendor ID as <c>unsigned short</c>.</param>
+        /// <param name="product_id">Product ID as <c>unsigned short</c>.</param>
+        /// <param name="serial_number"><c>wchar_t*</c>.</param>
+        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         public static extern IntPtr hid_open(ushort vendor_id, ushort product_id, [In] string serial_number);
 
-        /// Return Type: hid_device*
-        ///path: char*
-        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr hid_open_path([In] string path);
+        /* I do not intend to use this DLL function and can't find an easy way
+         * to fix the warning CA2101: Specify marshaling for P/Invoke string
+         * arguments, so I simply comment out that function.
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///data: unsigned char*
-        ///length: size_t->unsigned int
+        /// <returns><c>hid_device*</c>.</returns>
+        /// <param name="path"><c>char*</c>.</param>
+        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        public static extern IntPtr hid_open_path([In] string path);
+        */
+
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="data"><c>unsigned char*</c>.</param>
+        /// <param name="length"><c>size_t-&gt;unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_write(IntPtr device, [In] byte[] data, uint length);
 
-        /// Return Type: int
-        ///dev: hid_device*
-        ///data: unsigned char*
-        ///length: size_t->unsigned int
-        ///milliseconds: int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_data"><c>unsigned char*</c>.</param>
+        /// <param name="length"><c>size_t-&gt;unsigned int</c>.</param>
+        /// <param name="milliseconds"><c>int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_read_timeout(IntPtr device, [Out] byte[] buf_data, uint length, int milliseconds);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///data: unsigned char*
-        ///length: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_data"><c>unsigned char*</c>.</param>
+        /// <param name="length"><c>size_t-&gt;unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_read(IntPtr device, [Out] byte[] buf_data, uint length);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///nonblock: int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="nonblock"><c>int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_set_nonblocking(IntPtr device, int nonblock);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///data: char*
-        ///length: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="data"><c>char*</c>.</param>
+        /// <param name="length"><c>size_t-&gt;unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_send_feature_report(IntPtr device, [In] byte[] data, uint length);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///data: unsigned char*
-        ///length: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_data"><c>unsigned char*</c>.</param>
+        /// <param name="length"><c>size_t-&gt;unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int hid_get_feature_report(IntPtr device, [Out] byte[] buf_data, uint length);
 
-        /// Return Type: void
-        ///device: hid_device*
+        /// <param name="device"><c>hid_device*</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void hid_close(IntPtr device);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///string: wchar_t*
-        ///maxlen: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_string"><c>wchar_t*</c>.</param>
+        /// <param name="length">String capacity (was <c>size_t</c>) <c>unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         public static extern int hid_get_manufacturer_string(IntPtr device, StringBuilder buf_string, uint length);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///string: wchar_t*
-        ///maxlen: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_string"><c>wchar_t*</c>.</param>
+        /// <param name="length">String capacity (was <c>size_t</c>) <c>unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         public static extern int hid_get_product_string(IntPtr device, StringBuilder buf_string, uint length);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///string: wchar_t*
-        ///maxlen: size_t->unsigned int
+        /// <returns>Status code <c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="buf_serial"><c>wchar_t*</c>.</param>
+        /// <param name="maxlen">String capacity (was <c>size_t</c>) <c>unsigned int</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         public static extern int hid_get_serial_number_string(IntPtr device, StringBuilder buf_serial, uint maxlen);
 
-        /// Return Type: int
-        ///device: hid_device*
-        ///string_index: int
-        ///string: wchar_t*
-        ///maxlen: size_t->unsigned int
-        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
+        /// <returns><c>int</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
+        /// <param name="string_index">String index as <c>int</c>.</param>
+        /// <param name="buf_string"><c>wchar_t*</c> marshaled into a <c>StringBuilder</c>.</param>
+        /// <param name="maxlen">String capacity (was <c>size_t</c>) <c>unsigned int</c>.</param>
+        [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
         public static extern int hid_get_indexed_string(IntPtr device, int string_index, StringBuilder buf_string, uint maxlen);
 
-        /// Return Type: wchar_t*
-        ///device: hid_device*
+        /// <returns><c>wchar_t*</c>.</returns>
+        /// <param name="device"><c>hid_device*</c>.</param>
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
         public static extern IntPtr hid_error(IntPtr device);
 

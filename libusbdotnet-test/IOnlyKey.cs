@@ -6,8 +6,15 @@ namespace LibusbdotnetTest
 {
     using System;
 
+    /// <summary>
+    ///   Interface for all operations that must be supported by an OnlyKey.
+    /// </summary>
     internal interface IOnlyKey : IDisposable
     {
+        /// <summary>
+        ///   Return array of OnlyKey slot names.
+        /// </summary>
+        /// <returns>Array of slot names.  Empty slots are <c>null</c>.</returns>
         public string[] SlotNames();
     }
 

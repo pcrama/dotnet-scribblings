@@ -3,7 +3,7 @@
     "settings": {
         "orderingRules": {
             "elementOrder" : [ "kind", "accessibility", "constant", "static", "readonly" ],
-            "usingDirectivesPlacement": "outsideNamespace",
+            "usingDirectivesPlacement": "insideNamespace",
             "systemUsingDirectivesFirst": true,
             "blankLinesBetweenUsingGroups": "allow"
         },
