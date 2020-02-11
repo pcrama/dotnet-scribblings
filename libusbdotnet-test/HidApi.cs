@@ -5,6 +5,8 @@
 namespace LibusbdotnetTest
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.InteropServices;
     using System.Text;
@@ -150,43 +152,244 @@ namespace LibusbdotnetTest
         [DllImport(DllFileName, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Auto)]
         public static extern IntPtr hid_error(IntPtr device);
 
-        /** hidapi info structure */
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-        public struct hid_device_info
+        public class HidDeviceInfo
         {
+            public HidDeviceInfo(
+                string path,
+                ushort vendor_id,
+                ushort product_id,
+                string serial_number,
+                ushort release_number,
+                string manufacturer_string,
+                string product_string,
+                ushort usage_page,
+                ushort usage,
+                int interface_number)
+            {
+                this.path = path;
+                this.vendor_id = vendor_id;
+                this.product_id = product_id;
+                this.serial_number = serial_number;
+                this.release_number = release_number;
+                this.manufacturer_string = manufacturer_string;
+                this.product_string = product_string;
+                this.usage_page = usage_page;
+                this.usage = usage;
+                this.interface_number = interface_number;
+            }
+
             /** Platform-specific device path */
-            [MarshalAs(UnmanagedType.LPStr)]
-            public string path;
+            public string path { get; }
             /** Device Vendor ID */
-            public ushort vendor_id;
+            public ushort vendor_id { get; }
             /** Device Product ID */
-            public ushort product_id;
+            public ushort product_id { get; }
             /** Serial Number */
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string serial_number;
+            public string serial_number { get; }
             /** Device Release Number in binary-coded decimal,
                 also known as Device Version Number */
-            public ushort release_number;
+            public ushort release_number { get; }
             /** Manufacturer String */
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string manufacturer_string;
+            public string manufacturer_string { get; }
             /** Product string */
-            [MarshalAs(UnmanagedType.LPWStr)]
-            public string product_string;
+            public string product_string { get; }
             /** Usage Page for this Device/Interface
                 (Windows/Mac only). */
-            public ushort usage_page;
+            public ushort usage_page { get; }
             /** Usage for this Device/Interface
                 (Windows/Mac only).*/
-            public ushort usage;
+            public ushort usage { get; }
             /** The USB interface which this logical device
                 represents. Valid on both Linux implementations
                 in all cases, and valid on the Windows implementation
                 only if the device contains more than one interface. */
-            public int interface_number;
+            public int interface_number { get; }
+        }
 
-            /** Pointer to the next device */
-            public IntPtr next;
+        public class HidDeviceEnumerable : IEnumerable<HidDeviceInfo>
+        {
+            private ushort vendor_id;
+            private ushort product_id;
+
+            public HidDeviceEnumerable(ushort vendor_id, ushort product_id)
+            {
+                this.vendor_id = vendor_id;
+                this.product_id = product_id;
+            }
+
+            public IEnumerator<HidDeviceInfo> GetEnumerator()
+            {
+                return new HidDeviceEnumerator(this.vendor_id, this.product_id);
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return this.GetEnumerator1();
+            }
+
+            private IEnumerator GetEnumerator1()
+            {
+                return this.GetEnumerator();
+            }
+        }
+
+        /// <summary>
+        ///   Enumerator for HID devices.
+        /// </summary>
+        /// <remarks>
+        ///   <para>
+        ///     Written following
+        ///     https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1?view=netframework-4.8.
+        ///   </para>
+        /// </remarks>
+        public class HidDeviceEnumerator : IDisposable, IEnumerator<HidDeviceInfo>
+        {
+            private IntPtr first = IntPtr.Zero;
+
+            private IntPtr current = IntPtr.Zero;
+
+            private bool pastEnd = false;
+
+            public HidDeviceEnumerator(ushort vendor_id, ushort product_id)
+            {
+                this.first = hid_enumerate(vendor_id, product_id);
+                this.current = IntPtr.Zero;
+                this.pastEnd = false;
+            }
+
+            ~HidDeviceEnumerator()
+            {
+                this.Dispose();
+            }
+
+            public HidDeviceInfo Current
+            {
+                get
+                {
+                    if (this.pastEnd)
+                    {
+                        throw new InvalidOperationException();
+                    }
+
+                    var hid = this.UnMarshal(this.current); // can throw InvalidOperationException, too
+                    return new HidDeviceInfo(
+                        hid.path,
+                        hid.vendor_id,
+                        hid.product_id,
+                        hid.serial_number,
+                        hid.release_number,
+                        hid.manufacturer_string,
+                        hid.product_string,
+                        hid.usage_page,
+                        hid.usage,
+                        hid.interface_number);
+                }
+            }
+
+            object IEnumerator.Current => this.Current1;
+
+            private object Current1 => this.Current;
+
+            public void Dispose()
+            {
+                if (this.first != IntPtr.Zero)
+                {
+                    this.current = IntPtr.Zero;
+                    this.pastEnd = false;
+                    hid_free_enumeration(this.first);
+                    this.first = IntPtr.Zero;
+                }
+
+                // make CA1816 happy, personally I did not mind that Dispose
+                // would be called a second time as NO-OP:
+                GC.SuppressFinalize(this);
+            }
+
+            public bool MoveNext()
+            {
+                if (this.pastEnd)
+                {
+                    return false;
+                }
+
+                if (this.current == IntPtr.Zero)
+                {
+                    // starting to enumerate devices
+                    if (this.first == IntPtr.Zero)
+                    {
+                        return false; // no devices at all
+                    }
+                    else
+                    {
+                        // move from before any device to first
+                        this.current = this.first;
+                        return true;
+                    }
+                }
+                else
+                {
+                    // inside enumeration, advance
+                    var hid = this.UnMarshal(this.current);
+                    this.current = hid.next;
+                    this.pastEnd = this.current == IntPtr.Zero;
+                    return !this.pastEnd;
+                }
+            }
+
+            public void Reset()
+            {
+                this.current = IntPtr.Zero;
+                this.pastEnd = false;
+            }
+
+            private hid_device_info UnMarshal(IntPtr p)
+            {
+                if (p == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException();
+                }
+
+                return (hid_device_info)Marshal.PtrToStructure(p, typeof(hid_device_info));
+            }
+
+            /** hidapi info structure */
+            [StructLayout(LayoutKind.Sequential)]
+            private struct hid_device_info
+            {
+                /** Platform-specific device path */
+                [MarshalAs(UnmanagedType.LPStr)]
+                public string path;
+                /** Device Vendor ID */
+                public ushort vendor_id;
+                /** Device Product ID */
+                public ushort product_id;
+                /** Serial Number */
+                [MarshalAs(UnmanagedType.LPWStr)]
+                public string serial_number;
+                /** Device Release Number in binary-coded decimal,
+                    also known as Device Version Number */
+                public ushort release_number;
+                /** Manufacturer String */
+                [MarshalAs(UnmanagedType.LPWStr)]
+                public string manufacturer_string;
+                /** Product string */
+                [MarshalAs(UnmanagedType.LPWStr)]
+                public string product_string;
+                /** Usage Page for this Device/Interface
+                    (Windows/Mac only). */
+                public ushort usage_page;
+                /** Usage for this Device/Interface
+                    (Windows/Mac only).*/
+                public ushort usage;
+                /** The USB interface which this logical device
+                    represents. Valid on both Linux implementations
+                    in all cases, and valid on the Windows implementation
+                    only if the device contains more than one interface. */
+                public int interface_number;
+
+                /** Pointer to the next device */
+                public IntPtr next;
+            }
         }
     }
 }
