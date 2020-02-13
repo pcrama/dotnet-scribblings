@@ -6,8 +6,6 @@ namespace LibusbdotnetTest
 {
     // See https://stackoverflow.com/a/957544 for how to access linked list
     using System;
-    using System.Runtime.InteropServices;
-    using System.Text;
 
     internal static class Program
     {
@@ -19,107 +17,119 @@ namespace LibusbdotnetTest
 
         public static void Main()
         {
-            string[] testSlots = { "a", "b" };
-            using (var onlyKey = new HardwareOnlyKey())
+            var hid_api = HidApi.Library;
+            Console.WriteLine("Success opening HidApi");
+            EnumerateHid(0);
+            EnumerateHid(1);
+            DoSomethingWithHid();
+            using (var onlyKey = new HardwareOnlyKey(hid_api))
             {
                 foreach (var s in onlyKey.SlotNames())
                 {
                     Console.WriteLine(s);
                 }
             }
-
-            if (HidApi.hid_init() == 0)
-            {
-                Console.WriteLine("Success opening HidApi");
-                try
-                {
-                    EnumerateHid(0);
-                    EnumerateHid(1);
-                    DoSomethingWithHid();
-                }
-                finally
-                {
-                    if (HidApi.hid_exit() == 0)
-                    {
-                        Console.WriteLine("Success closing HidApi");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Could not exit HidApi properly");
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine("Abysmal failure");
-            }
         }
 
         private static void EnumerateHid(int idx)
         {
-            foreach (var hid in new HidApi.HidDeviceEnumerable(deviceIds[idx].VendorId, deviceIds[idx].ProductId))
+            var foundAtLeast1Device = false;
+            foreach (var hid in HidApi.Library.Enumerate(deviceIds[idx].VendorId, deviceIds[idx].ProductId))
             {
+                if (!foundAtLeast1Device)
+                {
+                    Console.WriteLine(
+                        $"Found device for v=#{deviceIds[idx].VendorId:X}, p={deviceIds[idx].ProductId:X}");
+                }
+
+                foundAtLeast1Device = true;
                 Console.WriteLine(
                     "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
-                    hid.path,
-                    hid.vendor_id,
-                    hid.product_id,
-                    hid.serial_number,
-                    hid.manufacturer_string,
-                    hid.product_string,
-                    hid.usage_page,
-                    hid.usage,
-                    hid.interface_number);
+                    hid.Path,
+                    hid.VendorId,
+                    hid.ProductId,
+                    hid.SerialNumber,
+                    hid.ManufacturerString,
+                    hid.ProductString,
+                    hid.UsagePage,
+                    hid.Usage,
+                    hid.InterfaceNumber);
+            }
+
+            if (!foundAtLeast1Device)
+            {
+                Console.WriteLine(
+                    $"No devices found for v=#{deviceIds[idx].VendorId:X}, p={deviceIds[idx].ProductId:X}");
             }
         }
 
         private static void DoSomethingWithHid()
         {
-            var hid1 = HidApi.hid_open(deviceIds[0].VendorId, deviceIds[0].ProductId, null);
-            if (hid1 == IntPtr.Zero)
+            IHidHandle hid1 = null;
+            try
             {
-                Console.WriteLine("Could not open once, retrying");
-                hid1 = HidApi.hid_open(deviceIds[1].VendorId, deviceIds[1].ProductId, null);
-            }
+                try
+                {
+                    hid1 = HidApi.Library.Open(deviceIds[0].VendorId, deviceIds[0].ProductId, null);
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.WriteLine($"Could not open once ({e.Message}), retrying");
+                    try
+                    {
+                        hid1 = HidApi.Library.Open(deviceIds[1].VendorId, deviceIds[1].ProductId, null);
+                    }
+                    catch (InvalidOperationException f)
+                    {
+                        Console.WriteLine($"No device found ({f.Message}), sorry.");
+                        return;
+                    }
+                }
 
-            if (hid1 == IntPtr.Zero)
-            {
-                Console.WriteLine("No device found, sorry");
-                return;
-            }
+                if (hid1 == null)
+                {
+                    Console.WriteLine("No device found, sorry, should not be reached.");
+                    return;
+                }
 
-            var manufacturer = new StringBuilder(100);
-            if (HidApi.hid_get_manufacturer_string(hid1, manufacturer, Convert.ToUInt16(manufacturer.Capacity)) == 0)
-            {
-                Console.WriteLine("Manufacturer = {0}", manufacturer);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't get manufacturer info");
-            }
+                try
+                {
+                    Console.WriteLine("Manufacturer = {0}", hid1.GetManufacturerString());
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.WriteLine($"Couldn't get manufacturer info: {e.Message}");
+                }
 
-            var product = new StringBuilder(100);
-            if (HidApi.hid_get_product_string(hid1, product, Convert.ToUInt16(product.Capacity)) == 0)
-            {
-                Console.WriteLine("Product = {0}", product);
-            }
-            else
-            {
-                Console.WriteLine("Couldn't get product info");
-            }
+                try
+                {
+                    Console.WriteLine("Product = {0}", hid1.GetProductString());
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.WriteLine($"Couldn't get product info: {e.Message}");
+                }
 
-            var serial_number = new StringBuilder(100);
-            if (HidApi.hid_get_serial_number_string(hid1, serial_number, Convert.ToUInt16(serial_number.Capacity)) == 0)
-            {
-                Console.WriteLine("Serial_number = {0}", serial_number);
+                try
+                {
+                    Console.WriteLine("Serial_number = {0}", hid1.GetSerialNumber());
+                }
+                catch (InvalidOperationException e)
+                {
+                    Console.WriteLine($"Couldn't get serial number: {e.Message}");
+                }
             }
-            else
+            finally
             {
-                Console.WriteLine("Couldn't get serial_number info");
+                // NB: normally I should be using the `using' keyword and the
+                // hid1.Dispose would be implicit...
+                if (hid1 != null)
+                {
+                    hid1.Dispose();
+                    hid1 = null;
+                    Console.WriteLine("Closed device");
+                }
             }
-
-            HidApi.hid_close(hid1);
-            Console.WriteLine("Closed device");
         }
 
         private class VendorProductIdPair

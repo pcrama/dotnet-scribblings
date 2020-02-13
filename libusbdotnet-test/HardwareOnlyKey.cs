@@ -13,20 +13,15 @@ namespace LibusbdotnetTest
     {
         private bool disposed = true;
 
+        private HidApi hidApi = null;
+
         /// <summary>
         ///   Initializes a new instance of the <see cref="HardwareOnlyKey"/> class.
         /// </summary>
-        public HardwareOnlyKey()
+        /// <param name="hidApi"><see cref="HidApi"/> instance wrapping the hidapi library.</param>
+        public HardwareOnlyKey(HidApi hidApi)
         {
-            if (HidApi.hid_init() != 0)
-            {
-                throw new SystemException("Failed to initialize hidapi");
-            }
-            else
-            {
-                Console.WriteLine("hid_init returned 0");
-            }
-
+            this.hidApi = hidApi;
             this.disposed = false;
 
             // ... find HID device here
@@ -103,10 +98,7 @@ namespace LibusbdotnetTest
                 // unmanaged resources here.
                 // If disposing is false,
                 // only the following code is executed.
-                if (HidApi.hid_exit() < 0)
-                {
-                    Console.WriteLine("Failed to hid_exit()");
-                }
+                this.hidApi = null;
 
                 // Note disposing has been done.
                 this.disposed = true;
