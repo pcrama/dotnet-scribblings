@@ -143,7 +143,7 @@ namespace LibusbdotnetTest
     public partial class HidApi
     {
         /// <summary>
-        ///   Return an enumerator for HID devices.
+        ///   Return an enumerator for HID devices with a given vendor and product ID.
         /// </summary>
         /// <remarks>
         ///   <para>
@@ -160,9 +160,22 @@ namespace LibusbdotnetTest
                 Justification = "Instance method to make sure the hidapi library has been initialized.")]
         public IEnumerable<HidDeviceInfo> Enumerate(ushort vendorId, ushort productId)
         {
-            // var first = NativeMethods.hid_enumerate(vendor_id, product_id);
-            // return new HidDeviceEnumerator(first);
             return new HidDeviceCollection(vendorId, productId);
+        }
+
+        /// <summary>
+        ///   Return an enumerator for all HID devices.
+        /// </summary>
+        /// <seealso cref="Enumerate(ushort, ushort)"/>
+        /// <returns><see cref="HidDeviceInfo"/> collection.</returns>
+        [SuppressMessage(
+                "Microsoft.Performance",
+                "CA1822:MarkMembersAsStatic",
+                Justification = "Instance method to make sure the hidapi library has been initialized.")]
+        public IEnumerable<HidDeviceInfo> Enumerate()
+        {
+            // 0 is the wildcard value.
+            return new HidDeviceCollection(0, 0);
         }
 
         /// <summary>

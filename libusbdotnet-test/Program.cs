@@ -17,12 +17,44 @@ namespace LibusbdotnetTest
 
         public static void Main()
         {
-            var hid_api = HidApi.Library;
+            var hidApi = HidApi.Library;
             Console.WriteLine("Success opening HidApi");
-            EnumerateHid(0);
-            EnumerateHid(1);
+            HidDeviceInfo onlykey = null;
+            try
+            {
+                onlykey = FindSoleOnlyKey(hidApi);
+            }
+            catch (InvalidOperationException e)
+            {
+                Console.WriteLine($"Oops: {e.Message}");
+            }
+
+            if (onlykey != null)
+            {
+                Console.WriteLine(
+                    "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
+                    onlykey.Path,
+                    onlykey.VendorId,
+                    onlykey.ProductId,
+                    onlykey.SerialNumber,
+                    onlykey.ManufacturerString,
+                    onlykey.ProductString,
+                    onlykey.UsagePage,
+                    onlykey.Usage,
+                    onlykey.InterfaceNumber);
+                using (var hidDevice = hidApi.Open(onlykey.Path))
+                {
+                    Console.WriteLine(
+                        "hidApi.Open({0}) ->\n  m={1}\n  p={2}\n  s={3}",
+                        onlykey.Path,
+                        hidDevice.GetManufacturerString(),
+                        hidDevice.GetProductString(),
+                        hidDevice.GetSerialNumber());
+                }
+            }
+
             DoSomethingWithHid();
-            using (var onlyKey = new HardwareOnlyKey(hid_api))
+            using (var onlyKey = new HardwareOnlyKey(hidApi))
             {
                 foreach (var s in onlyKey.SlotNames())
                 {
@@ -31,35 +63,52 @@ namespace LibusbdotnetTest
             }
         }
 
-        private static void EnumerateHid(int idx)
+        /// <summary>
+        ///   Look for 1! OnlyKey in HID devices.
+        /// </summary>
+        /// <remarks>
+        ///   <para>
+        ///     Implemented close to the logic in
+        ///     https://github.com/trustcrypto/python-onlykey/blob/a5b5b0787bf8450593a66e27f1bbcc2f2e82ded9/onlykey/client.py#L168.
+        ///   </para>
+        /// </remarks>
+        private static HidDeviceInfo FindSoleOnlyKey(HidApi hidApi)
         {
-            var foundAtLeast1Device = false;
-            foreach (var hid in HidApi.Library.Enumerate(deviceIds[idx].VendorId, deviceIds[idx].ProductId))
+            const string onlykeySerialNumber = "1000000000";
+            var devices = new System.Collections.Generic.List<HidDeviceInfo>();
+            foreach (var devInfo in hidApi.Enumerate())
             {
-                if (!foundAtLeast1Device)
+                foreach (var vpp in deviceIds)
                 {
-                    Console.WriteLine(
-                        $"Found device for v=#{deviceIds[idx].VendorId:X}, p={deviceIds[idx].ProductId:X}");
+                    if ((devInfo.VendorId == vpp.VendorId) && (devInfo.ProductId == vpp.ProductId))
+                    {
+                        if (devInfo.SerialNumber == onlykeySerialNumber)
+                        {
+                            if ((devInfo.UsagePage == 0xffab) || (devInfo.InterfaceNumber == 2))
+                            {
+                                devices.Add(devInfo);
+                            }
+                        }
+                        else
+                        {
+                            if ((devInfo.UsagePage == 0xf1d0) || (devInfo.InterfaceNumber == 1))
+                            {
+                                devices.Add(devInfo);
+                            }
+                        }
+                    }
                 }
-
-                foundAtLeast1Device = true;
-                Console.WriteLine(
-                    "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
-                    hid.Path,
-                    hid.VendorId,
-                    hid.ProductId,
-                    hid.SerialNumber,
-                    hid.ManufacturerString,
-                    hid.ProductString,
-                    hid.UsagePage,
-                    hid.Usage,
-                    hid.InterfaceNumber);
             }
 
-            if (!foundAtLeast1Device)
+            switch (devices.Count)
             {
-                Console.WriteLine(
-                    $"No devices found for v=#{deviceIds[idx].VendorId:X}, p={deviceIds[idx].ProductId:X}");
+                case 0:
+                    throw new InvalidOperationException("No OnlyKey found");
+                case 1:
+                    return devices[0];
+                default:
+                    throw new InvalidOperationException(
+                        $"{devices.Count} OnlyKey devices found, can not decide which one to take");
             }
         }
 
