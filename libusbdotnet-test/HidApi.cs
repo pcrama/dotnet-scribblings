@@ -579,14 +579,58 @@ namespace LibusbdotnetTest
                 }
             }
 
+            /// <summary>
+            ///   Wrapper for <see cref="NativeMethods.hid_read"/>.
+            /// </summary>
+            /// <returns><c>byte[]</c> of data read.</returns>
+            /// <param name="maxBytes">how many bytes to read.</param>
             public byte[] Read(ushort maxBytes)
             {
-                throw new NotImplementedException();
+                if (this.handle == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("Can only read from open HidHandle");
+                }
+                else
+                {
+                    var buffer = new byte[maxBytes + 1];
+                    var bytesRead = NativeMethods.hid_read(this.handle, buffer, maxBytes);
+                    if (bytesRead < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Error code {bytesRead} trying to read {maxBytes} bytes");
+                    }
+                    else
+                    {
+                        Array.Resize(ref buffer, bytesRead);
+                        return buffer;
+                    }
+                }
             }
 
+            /// <summary>
+            ///   Wrapper for <see cref="NativeMethods.hid_write"/>.
+            /// </summary>
+            /// <returns>how many bytes written</returns>
+            /// <param name="data"><c>byte[]</c> of bytes to write.</param>
             public int Write(byte[] data)
             {
-                throw new NotImplementedException();
+                if (this.handle == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("Can only write to open HidHandle");
+                }
+                else
+                {
+                    var bytesWritten = NativeMethods.hid_write(this.handle, data, Convert.ToUInt16(data.Length));
+                    if (bytesWritten < data.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Wrote {bytesWritten}, expected to write {data.Length} bytes");
+                    }
+                    else
+                    {
+                        return bytesWritten;
+                    }
+                }
             }
         }
 

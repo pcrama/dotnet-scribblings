@@ -50,6 +50,26 @@ namespace LibusbdotnetTest
                         hidDevice.GetManufacturerString(),
                         hidDevice.GetProductString(),
                         hidDevice.GetSerialNumber());
+                    Console.WriteLine("---");
+                    const byte OKGETLABELS = 0xe5;
+                    var w = hidDevice.Write(
+                        new byte[] { 0x0, 0xff, 0xff, 0xff, 0xff, OKGETLABELS, });
+                    Console.WriteLine($"Wrote {w} bytes");
+                    var r = hidDevice.Read(32);
+                    Console.Write($"Read {r.Length} bytes");
+                    foreach (var b in r)
+                    {
+                        if ((32 < b) && (b < 128))
+                        {
+                            Console.Write($" {Convert.ToChar(b)}");
+                        }
+                        else
+                        {
+                            Console.Write($" <{b:X2}>");
+                        }
+                    }
+
+                    Console.WriteLine();
                 }
             }
 
