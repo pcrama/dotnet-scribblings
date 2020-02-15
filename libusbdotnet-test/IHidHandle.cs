@@ -28,6 +28,14 @@ namespace LibusbdotnetTest
         public byte[] Read(ushort maxBytes);
 
         /// <summary>
+        ///   Blocking read <c>byte[]</c> from HID device with a timeout.
+        /// </summary>
+        /// <returns>Number of bytes read.</returns>
+        /// <param name="maxBytes">how many bytes to read.</param>
+        /// <param name="timeout">how many seconds to wait.</param>
+        public byte[] Read(ushort maxBytes, double timeout);
+
+        /// <summary>
         ///   Query Manufacturer from HID device.
         /// </summary>
         /// <returns><c>string</c>.</returns>

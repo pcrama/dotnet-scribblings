@@ -6,6 +6,7 @@ namespace LibusbdotnetTest
 {
     // See https://stackoverflow.com/a/957544 for how to access linked list
     using System;
+    using System.Text;
 
     internal static class Program
     {
@@ -55,21 +56,37 @@ namespace LibusbdotnetTest
                     var w = hidDevice.Write(
                         new byte[] { 0x0, 0xff, 0xff, 0xff, 0xff, OKGETLABELS, });
                     Console.WriteLine($"Wrote {w} bytes");
-                    var r = hidDevice.Read(32);
-                    Console.Write($"Read {r.Length} bytes");
-                    foreach (var b in r)
+                    while (true)
                     {
-                        if ((32 < b) && (b < 128))
+                        var r = hidDevice.Read(32, 1);
+                        if (r.Length == 0)
                         {
-                            Console.Write($" {Convert.ToChar(b)}");
+                            break;
                         }
-                        else
-                        {
-                            Console.Write($" <{b:X2}>");
-                        }
-                    }
 
-                    Console.WriteLine();
+                        var s = FromCString(r);
+                        if (s == "INITIALIZED")
+                        {
+                            Console.WriteLine("Please unlock your OnlyKey.");
+                            break;
+                        }
+
+                        foreach (var c in s)
+                        {
+#pragma warning disable SA1131 // This way of writing the condition emphasizes the range check
+                            if ((' ' < c) && (c <= '~'))
+#pragma warning restore SA1131 // Use readable conditions
+                            {
+                                Console.Write($" {c}");
+                            }
+                            else
+                            {
+                                Console.Write($" <{Convert.ToByte(c):X2}>");
+                            }
+                        }
+
+                        Console.WriteLine();
+                    }
                 }
             }
 
@@ -198,6 +215,26 @@ namespace LibusbdotnetTest
                     hid1 = null;
                     Console.WriteLine("Closed device");
                 }
+            }
+        }
+
+        private static string FromCString(byte[] d)
+        {
+            return FromCString(d, Encoding.ASCII);
+        }
+
+        private static string FromCString(byte[] d, Encoding encoding)
+        {
+            var zero = Array.IndexOf<byte>(d, 0);
+#pragma warning disable SA1131 // This way of writing the condition emphasizes the range check
+            if ((0 <= zero) && (zero < d.Length))
+#pragma warning restore SA1131 // Use readable conditions
+            {
+                return encoding.GetString(d, 0, zero);
+            }
+            else
+            {
+                return encoding.GetString(d);
             }
         }
 

@@ -608,9 +608,39 @@ namespace LibusbdotnetTest
             }
 
             /// <summary>
+            ///   Wrapper for <see cref="NativeMethods.hid_read_timeout"/>.
+            /// </summary>
+            /// <returns><c>byte[]</c> of data read.</returns>
+            /// <param name="maxBytes">how many bytes to read.</param>
+            /// <param name="timeout">timeout in seconds.</param>
+            public byte[] Read(ushort maxBytes, double timeout)
+            {
+                if (this.handle == IntPtr.Zero)
+                {
+                    throw new InvalidOperationException("Can only read from open HidHandle");
+                }
+                else
+                {
+                    var buffer = new byte[maxBytes + 1];
+                    var bytesRead = NativeMethods.hid_read_timeout(
+                        this.handle, buffer, maxBytes, Convert.ToInt32(1000.0 * timeout));
+                    if (bytesRead < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Error code {bytesRead} trying to read {maxBytes} bytes");
+                    }
+                    else
+                    {
+                        Array.Resize(ref buffer, bytesRead);
+                        return buffer;
+                    }
+                }
+            }
+
+            /// <summary>
             ///   Wrapper for <see cref="NativeMethods.hid_write"/>.
             /// </summary>
-            /// <returns>how many bytes written</returns>
+            /// <returns>how many bytes written.</returns>
             /// <param name="data"><c>byte[]</c> of bytes to write.</param>
             public int Write(byte[] data)
             {
