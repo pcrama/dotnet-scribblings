@@ -2,7 +2,7 @@
 // Copyright (c) Philippe Crama. All rights reserved.
 // Licensed under the GPLv3 license. See LICENSE file for full license information.
 // </copyright>
-namespace LibusbdotnetTest
+namespace HidapiTest
 {
     // See https://stackoverflow.com/a/957544 for how to access linked list
     using System;
