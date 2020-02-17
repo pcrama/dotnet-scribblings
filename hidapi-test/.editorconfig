@@ -1,3 +1,3 @@
 [*.cs]
 # Allow literal strings in source code in these classes:
-dotnet_code_quality.CA1303.excluded_type_names_with_derived_types = Program|HardwareOnlyKey|NativeMethods|HidApi
+dotnet_code_quality.CA1303.excluded_type_names_with_derived_types = Program|HardwareOnlyKey|NativeMethods|HidApi|OnlyKeyException
