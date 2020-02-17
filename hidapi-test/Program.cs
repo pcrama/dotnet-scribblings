@@ -20,133 +20,32 @@ namespace HidapiTest
         {
             var hidApi = HidApi.Library;
             Console.WriteLine("Success opening HidApi");
-            HidDeviceInfo onlykey = null;
-            try
+            using (var onlykey = new HardwareOnlyKey(hidApi))
             {
-                onlykey = FindSoleOnlyKey(hidApi);
-            }
-            catch (InvalidOperationException e)
-            {
-                Console.WriteLine($"Oops: {e.Message}");
-            }
-
-            if (onlykey != null)
-            {
-                Console.WriteLine(
-                    "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
-                    onlykey.Path,
-                    onlykey.VendorId,
-                    onlykey.ProductId,
-                    onlykey.SerialNumber,
-                    onlykey.ManufacturerString,
-                    onlykey.ProductString,
-                    onlykey.UsagePage,
-                    onlykey.Usage,
-                    onlykey.InterfaceNumber);
-                using (var hidDevice = hidApi.Open(onlykey.Path))
+                var di = onlykey?.DeviceInfo;
+                if (di != null)
                 {
                     Console.WriteLine(
-                        "hidApi.Open({0}) ->\n  m={1}\n  p={2}\n  s={3}",
-                        onlykey.Path,
-                        hidDevice.GetManufacturerString(),
-                        hidDevice.GetProductString(),
-                        hidDevice.GetSerialNumber());
-                    Console.WriteLine("---");
-                    const byte OKGETLABELS = 0xe5;
-                    var w = hidDevice.Write(
-                        new byte[] { 0x0, 0xff, 0xff, 0xff, 0xff, OKGETLABELS, });
-                    Console.WriteLine($"Wrote {w} bytes");
-                    while (true)
-                    {
-                        var r = hidDevice.Read(32, 1);
-                        if (r.Length == 0)
-                        {
-                            break;
-                        }
+                        "path = {0}\n  vendor_id={1:X4} product_id={2:X4}\n  serial_number={3}\n  manufacturer={4}\n  product={5}\n  usage_page={6:X4}  usage={7:X4}\n  interface_number={8}",
+                        di.Path,
+                        di.VendorId,
+                        di.ProductId,
+                        di.SerialNumber,
+                        di.ManufacturerString,
+                        di.ProductString,
+                        di.UsagePage,
+                        di.Usage,
+                        di.InterfaceNumber);
+                }
 
-                        var s = FromCString(r);
-                        if (s == "INITIALIZED")
-                        {
-                            Console.WriteLine("Please unlock your OnlyKey.");
-                            break;
-                        }
-
-                        foreach (var c in s)
-                        {
-#pragma warning disable SA1131 // This way of writing the condition emphasizes the range check
-                            if ((' ' < c) && (c <= '~'))
-#pragma warning restore SA1131 // Use readable conditions
-                            {
-                                Console.Write($" {c}");
-                            }
-                            else
-                            {
-                                Console.Write($" <{Convert.ToByte(c):X2}>");
-                            }
-                        }
-
-                        Console.WriteLine();
-                    }
+                Console.WriteLine("---");
+                foreach (var s in onlykey.SlotNames())
+                {
+                    Console.WriteLine(s == null ? "<null>" : ("'" + s + "'"));
                 }
             }
 
             DoSomethingWithHid();
-            using (var onlyKey = new HardwareOnlyKey(hidApi))
-            {
-                foreach (var s in onlyKey.SlotNames())
-                {
-                    Console.WriteLine(s);
-                }
-            }
-        }
-
-        /// <summary>
-        ///   Look for 1! OnlyKey in HID devices.
-        /// </summary>
-        /// <remarks>
-        ///   <para>
-        ///     Implemented close to the logic in
-        ///     https://github.com/trustcrypto/python-onlykey/blob/a5b5b0787bf8450593a66e27f1bbcc2f2e82ded9/onlykey/client.py#L168.
-        ///   </para>
-        /// </remarks>
-        private static HidDeviceInfo FindSoleOnlyKey(HidApi hidApi)
-        {
-            const string onlykeySerialNumber = "1000000000";
-            var devices = new System.Collections.Generic.List<HidDeviceInfo>();
-            foreach (var devInfo in hidApi.Enumerate())
-            {
-                foreach (var vpp in deviceIds)
-                {
-                    if ((devInfo.VendorId == vpp.VendorId) && (devInfo.ProductId == vpp.ProductId))
-                    {
-                        if (devInfo.SerialNumber == onlykeySerialNumber)
-                        {
-                            if ((devInfo.UsagePage == 0xffab) || (devInfo.InterfaceNumber == 2))
-                            {
-                                devices.Add(devInfo);
-                            }
-                        }
-                        else
-                        {
-                            if ((devInfo.UsagePage == 0xf1d0) || (devInfo.InterfaceNumber == 1))
-                            {
-                                devices.Add(devInfo);
-                            }
-                        }
-                    }
-                }
-            }
-
-            switch (devices.Count)
-            {
-                case 0:
-                    throw new InvalidOperationException("No OnlyKey found");
-                case 1:
-                    return devices[0];
-                default:
-                    throw new InvalidOperationException(
-                        $"{devices.Count} OnlyKey devices found, can not decide which one to take");
-            }
         }
 
         private static void DoSomethingWithHid()
@@ -215,26 +114,6 @@ namespace HidapiTest
                     hid1 = null;
                     Console.WriteLine("Closed device");
                 }
-            }
-        }
-
-        private static string FromCString(byte[] d)
-        {
-            return FromCString(d, Encoding.ASCII);
-        }
-
-        private static string FromCString(byte[] d, Encoding encoding)
-        {
-            var zero = Array.IndexOf<byte>(d, 0);
-#pragma warning disable SA1131 // This way of writing the condition emphasizes the range check
-            if ((0 <= zero) && (zero < d.Length))
-#pragma warning restore SA1131 // Use readable conditions
-            {
-                return encoding.GetString(d, 0, zero);
-            }
-            else
-            {
-                return encoding.GetString(d);
             }
         }
 
