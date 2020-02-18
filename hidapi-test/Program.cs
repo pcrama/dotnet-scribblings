@@ -39,7 +39,7 @@ namespace HidapiTest
                 }
 
                 Console.WriteLine("---");
-                foreach (var s in onlykey.SlotNames())
+                foreach (var s in onlykey.SlotLabels())
                 {
                     Console.WriteLine(s == null ? "<null>" : ("'" + s + "'"));
                 }

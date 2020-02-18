@@ -62,10 +62,10 @@ namespace HidapiTest
         public HidDeviceInfo DeviceInfo { get => this.deviceInfo; }
 
         /// <summary>
-        ///   Return array of OnlyKey slot names.
+        ///   Return array of OnlyKey slot labels.
         /// </summary>
-        /// <returns>Array of slot names.  Empty slots are <c>""</c>.</returns>
-        public string[] SlotNames()
+        /// <returns>Array of slot labels.  Empty slots are <c>""</c>.</returns>
+        public string[] SlotLabels()
         {
             const byte OKGETLABELS = 0xe5;
             var slots = new string[12];
