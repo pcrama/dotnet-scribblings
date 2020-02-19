@@ -12,6 +12,12 @@ namespace HidapiTest
     internal interface IOnlyKey : IDisposable
     {
         /// <summary>
+        ///   Return array of OnlyKey key labels.
+        /// </summary>
+        /// <returns>Array of key labels.  Empty keys are <c>""</c>.</returns>
+        public string[] KeyLabels();
+
+        /// <summary>
         ///   Return array of OnlyKey slot labels.
         /// </summary>
         /// <returns>Array of slot labels.  Empty slots are <c>""</c>.</returns>
@@ -20,12 +26,16 @@ namespace HidapiTest
 
     internal class TestOnlyKey : IOnlyKey
     {
+        private string[] keys;
         private string[] slots;
 
-        public TestOnlyKey(string[] slots)
+        public TestOnlyKey(string[] keys, string[] slots)
         {
+            this.keys = keys;
             this.slots = slots;
         }
+
+        public string[] KeyLabels() => this.keys;
 
         public string[] SlotLabels() => this.slots;
 

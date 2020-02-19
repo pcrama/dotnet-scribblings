@@ -13,11 +13,13 @@ namespace HidapiTest
     /// </summary>
     public class LockedOrUninitializedException : OnlyKeyException
     {
+        private const string DefaultMessage = "OnlyKey is locked or not initialized yet.";
+
         /// <summary>
         ///   Initializes a new instance of the <see cref="LockedOrUninitializedException"/> class.
         /// </summary>
         public LockedOrUninitializedException()
-        : this("OnlyKey is locked or not initialized yet.")
+        : this(DefaultMessage)
         {
         }
 
@@ -26,7 +28,7 @@ namespace HidapiTest
         /// </summary>
         /// <param name="message">error message.</param>
         public LockedOrUninitializedException(string message)
-        : base(message)
+        : base(DefaultMessage + " (" + message + ")")
         {
         }
 

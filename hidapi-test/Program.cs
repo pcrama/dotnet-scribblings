@@ -39,9 +39,29 @@ namespace HidapiTest
                 }
 
                 Console.WriteLine("---");
-                foreach (var s in onlykey.SlotLabels())
+                try
                 {
-                    Console.WriteLine(s == null ? "<null>" : ("'" + s + "'"));
+                    foreach (var s in onlykey.SlotLabels())
+                    {
+                        Console.WriteLine(s == null ? "<null>" : ("'" + s + "'"));
+                    }
+                }
+                catch (LockedOrUninitializedException e)
+                {
+                    Console.WriteLine($"Could not get slot labels: {e.Message}");
+                }
+
+                Console.WriteLine("---");
+                try
+                {
+                    foreach (var k in onlykey.KeyLabels())
+                    {
+                        Console.WriteLine(k == null ? "<null>" : ("'" + k + "'"));
+                    }
+                }
+                catch (LockedOrUninitializedException e)
+                {
+                    Console.WriteLine($"Could not get key labels: {e.Message}");
                 }
             }
 

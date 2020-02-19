@@ -12,6 +12,8 @@ namespace HidapiTest
     /// </summary>
     public class HardwareOnlyKey : IOnlyKey
     {
+        private const byte OKGETLABELS = 0xe5;
+
         private static VendorProductIdPair[] deviceIds =
         {
             new VendorProductIdPair(vendor: 0x16c0, product: 0x0486),
@@ -62,12 +64,55 @@ namespace HidapiTest
         public HidDeviceInfo DeviceInfo { get => this.deviceInfo; }
 
         /// <summary>
+        ///   Return array of OnlyKey key labels.
+        /// </summary>
+        /// <returns>Array of key labels.  Empty keys are <c>""</c>.</returns>
+        public string[] KeyLabels()
+        {
+            var keys = new string[33];
+            for (var idx = 0; idx < keys.Length; ++idx)
+            {
+                keys[idx] = null;
+            }
+
+            this.SendMessage(OKGETLABELS, 107);
+            for (var idx = 0; idx < keys.Length; ++idx)
+            {
+                var r = this.device.Read(32, 1);
+                var s = FromCString(r);
+
+                // TODO: find out what an uninitialized OnlyKey answers
+                if (s == "INITIALIZED")
+                {
+                    throw new LockedOrUninitializedException(s);
+                }
+
+                if (
+                    (r.Length >= 2)
+#pragma warning disable SA1131 // This way of writing the condition emphasizes the range check
+                    && (25 <= r[0]) && (r[0] <= 57)
+#pragma warning restore SA1131 // Use readable conditions
+                    && (r[0] - 25 == idx)
+                    && (r[1] == Convert.ToByte('|')))
+                {
+                    keys[idx] = FromCString(r, 2);
+                }
+                else
+                {
+                    throw new OnlyKeyException(
+                        $"Error parsing OnlyKey response {s}");
+                }
+            }
+
+            return keys;
+        }
+
+        /// <summary>
         ///   Return array of OnlyKey slot labels.
         /// </summary>
         /// <returns>Array of slot labels.  Empty slots are <c>""</c>.</returns>
         public string[] SlotLabels()
         {
-            const byte OKGETLABELS = 0xe5;
             var slots = new string[12];
             for (var idx = 0; idx < slots.Length; ++idx)
             {
@@ -75,16 +120,18 @@ namespace HidapiTest
             }
 
             // TODO: leading 0x0 is only needed on Windows, not on Linux
-            var w = this.device.Write(
-                new byte[] { 0x0, 0xff, 0xff, 0xff, 0xff, OKGETLABELS, });
+            // var w = this.device.Write(
+            //     new byte[] { 0x0, 0xff, 0xff, 0xff, 0xff, OKGETLABELS, });
+            this.SendMessage(OKGETLABELS);
             while (true)
             {
                 var r = this.device.Read(32, 1);
-
                 var s = FromCString(r);
+
+                // TODO: find out what an uninitialized OnlyKey answers
                 if (s == "INITIALIZED")
                 {
-                    throw new LockedOrUninitializedException();
+                    throw new LockedOrUninitializedException(s);
                 }
 
                 // Go BCD to binary representation
@@ -246,6 +293,44 @@ namespace HidapiTest
                     }
 
                     throw new MultipleOnlyKeyConnectedException(paths);
+            }
+        }
+
+        private void SendMessage(byte? message, byte? slotId = null)
+        {
+            // TODO: leading 0x0 is only needed on Windows, not on Linux
+            const int maxBufferLen = 64 + 1; // leading 0
+            var buffer = new byte[maxBufferLen];
+            var bufferLen = 0;
+            buffer[bufferLen++] = 0x0;
+            for (var idx = 0; idx < 4; ++idx)
+            {
+                buffer[bufferLen++] = 0xff;
+            }
+
+            if (message is byte messageVal)
+            {
+                buffer[bufferLen++] = messageVal;
+                if (slotId is byte slotIdVal)
+                {
+                    buffer[bufferLen++] = slotIdVal;
+                }
+            }
+            else
+            {
+                if (slotId is byte slotIdVal)
+                {
+                    throw new OnlyKeyException(
+                        $"When slotId={slotIdVal} is not null, message should not be null either");
+                }
+            }
+
+            Array.Resize(ref buffer, bufferLen);
+            var w = this.device.Write(buffer);
+            if (w != maxBufferLen)
+            {
+                throw new OnlyKeyException(
+                    $"Wanted to write {maxBufferLen} bytes but wrote {w}");
             }
         }
 
