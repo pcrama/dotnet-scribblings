@@ -1,6 +1,7 @@
 ﻿// Copied as starting point from https://docs.microsoft.com/en-us/dotnet/standard/serialization/examples-of-xml-serialization
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
@@ -39,6 +40,16 @@ public class PurchaseOrder
         ShipCost = shipCost;
         TotalCost = SubTotal + ShipCost;
     }
+
+    public Dictionary<string, OrderedItem> GetItems()
+    {
+        var result = new Dictionary<string, OrderedItem>();
+        foreach (var item in OrderedItems)
+        {
+            result[item.ItemNumber] = item;
+        }
+        return result;
+    }
 }
 
 public class Address
@@ -74,6 +85,41 @@ public class OrderedItem
     {
         LineTotal = UnitPrice * Quantity;
     }
+
+    public override bool Equals(object obj)
+    {
+        if (obj == null)
+        {
+            return false;
+        }
+
+        if (obj.GetType() != typeof(OrderedItem))
+        {
+            return false;
+        }
+
+        var other = (OrderedItem) obj;
+        return (ItemNumber == other.ItemNumber)
+            && (ItemName == other.ItemName)
+            && (Description == other.Description)
+            && (UnitPrice == other.UnitPrice)
+            && (Quantity == other.Quantity);
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
+    }
+
+    private string SafeString(string s)
+    {
+        return (s == null) ? "null" : ("'" + s + "'");
+    }
+
+    public override string ToString()
+    {
+        return SafeString(ItemNumber) + ":" + SafeString(ItemName) + " (" + SafeString(Description) + ")";
+    }
 }
 
 public class Test
@@ -82,8 +128,102 @@ public class Test
     {
         // Read and write purchase orders.
         Test t = new Test();
-        t.CreatePO("po.xml");
-        t.ReadPO("po.xml");
+        var po = t.ReadPO("po.xml");
+        var pp = t.ReadPO("pp.xml");
+        List<OrderedItem> onlyInPo = null, common = null, onlyInPp = null;
+        List<Tuple<string, OrderedItem, OrderedItem>> diffs = null;
+        if (!compareHashes<string, OrderedItem>(po.GetItems(), pp.GetItems(), ref onlyInPo, ref common, ref onlyInPp, ref diffs))
+        {
+            Console.WriteLine("Differences found:");
+            if (onlyInPo != null && onlyInPo.Count > 0)
+            {
+                Console.WriteLine("  Only in left:");
+                foreach (var item in onlyInPo)
+                {
+                    Console.WriteLine("    " + item);
+                }
+            }
+
+            if (common != null)
+            {
+                Console.WriteLine(
+                    "  {0} common item{1} out of {2}/{3}.",
+                    common.Count,
+                    (common.Count > 1) ? "s" : "",
+                    po.OrderedItems.Length,
+                    pp.OrderedItems.Length);
+            }
+
+            if (diffs != null && diffs.Count > 0)
+            {
+                Console.WriteLine(
+                    "  {0} different item values in left/right out of {1}/{2}:",
+                    diffs.Count,
+                    po.OrderedItems.Length,
+                    pp.OrderedItems.Length);
+                foreach (var tuple in diffs)
+                {
+                    Console.WriteLine("    - {0}:\n      {1}!={2}", tuple.Item1, tuple.Item2, tuple.Item3);
+                }
+            }
+
+            if (onlyInPp != null && onlyInPp.Count > 0)
+            {
+                Console.WriteLine("  Only in right:");
+                foreach (var item in onlyInPp)
+                {
+                    Console.WriteLine("    " + item);
+                }
+            }
+        }
+    }
+
+    private static bool compareHashes<TKey, TValue>(
+        IDictionary<TKey, TValue> left,
+        IDictionary<TKey, TValue> right,
+        ref List<TValue> onlyInLeft,
+        ref List<TValue> common,
+        ref List<TValue> onlyInRight,
+        ref List<Tuple<TKey, TValue, TValue>> valueDifferences)
+    {
+        onlyInLeft = new List<TValue>();
+        common = new List<TValue>();
+        onlyInRight = new List<TValue>();
+        valueDifferences = new List<Tuple<TKey, TValue, TValue>>();
+
+        // Go through left set, looking for its elements in right set
+        foreach (KeyValuePair<TKey, TValue> leftItem in left)
+        {
+            if (right.ContainsKey(leftItem.Key))
+            {
+                var rightItemValue = right[leftItem.Key];
+                if (leftItem.Value.Equals(rightItemValue))
+                {
+                    common.Add(rightItemValue);
+                }
+                else
+                {
+                    valueDifferences.Add(
+                        new Tuple<TKey, TValue, TValue>(leftItem.Key, leftItem.Value, rightItemValue));
+                }
+            }
+            else
+            {
+                onlyInLeft.Add(leftItem.Value);
+            }
+        }
+
+        // Go through right set, looking for its elements in left set.
+        foreach (KeyValuePair<TKey, TValue> rightItem in right)
+        {
+            // No need to maintain the common or valueDifferences lists, they
+            // were already filled in the previous pass.
+            if (!left.ContainsKey(rightItem.Key))
+            {
+                onlyInRight.Add(rightItem.Value);
+            }
+        }
+        return valueDifferences.Count == 0 && onlyInLeft.Count == 0 && onlyInRight.Count == 0;
     }
 
     private void CreatePO(string filename)
