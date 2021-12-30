@@ -3,33 +3,23 @@ namespace bolerogator.Server
 open System
 open System.IO
 open System.Text.Json
-open System.Text.Json.Serialization
 open Microsoft.AspNetCore.Hosting
-open Bolero
 open Bolero.Remoting
 open Bolero.Remoting.Server
 open bolerogator
 
-type BookService(ctx: IRemoteContext, env: IWebHostEnvironment) =
-    inherit RemoteHandler<Client.Main.BookService>()
+type ConfigurationMetadataService(ctx: IRemoteContext, env: IWebHostEnvironment) =
+    inherit RemoteHandler<Client.Main.ConfigurationMetadataService>()
 
-    let books =
-        let json = Path.Combine(env.ContentRootPath, "data/books.json") |> File.ReadAllText
-        JsonSerializer.Deserialize<Client.Main.Book[]>(json)
+    let configurationMetadatas =
+        let json = Path.Combine(env.ContentRootPath, "data/configurationMetadatas.json") |> File.ReadAllText
+        JsonSerializer.Deserialize<Client.Main.ConfigurationMetadata[]>(json)
         |> ResizeArray
 
-    override this.Handler =
+    override _.Handler =
         {
-            getBooks = ctx.Authorize <| fun () -> async {
-                return books.ToArray()
-            }
-
-            addBook = ctx.Authorize <| fun book -> async {
-                books.Add(book)
-            }
-
-            removeBookByIsbn = ctx.Authorize <| fun isbn -> async {
-                books.RemoveAll(fun b -> b.isbn = isbn) |> ignore
+            getConfigurationMetadatas = ctx.Authorize <| fun () -> async {
+                return configurationMetadatas.ToArray()
             }
 
             signIn = fun (username, password) -> async {

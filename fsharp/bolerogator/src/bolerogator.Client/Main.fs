@@ -1,6 +1,5 @@
 module bolerogator.Client.Main
 
-open System
 open Elmish
 open Bolero
 open Bolero.Html
@@ -19,7 +18,8 @@ type Model =
     {
         page: Page
         counter: int
-        books: Book[] option
+        configurationMetadatas: ConfigurationMetadata[] option
+        configuration: Configuration option
         error: string option
         username: string
         password: string
@@ -27,19 +27,35 @@ type Model =
         signInFailed: bool
     }
 
-and Book =
+and Configuration =
     {
-        title: string
-        author: string
-        publishDate: DateTime
-        isbn: string
+        configurationProjectName: string
+    }
+
+and ParameterMetadata =
+    {
+        name: string
+        uiName: string
+        description: string
+        type': string // "string" | "int" | "bool"
+        prefix: string option // only makes sense for type' = "string"
+        min: int option // min length for "string", minimum value for "int"
+        max: int option // max length for "string", minimum value for "int"
+    }
+
+and ConfigurationMetadata =
+    {
+        name: string
+        languageIndependent: ParameterMetadata[]
+        languageDependent: ParameterMetadata[]
     }
 
 let initModel =
     {
         page = Home
         counter = 0
-        books = None
+        configurationMetadatas = None
+        configuration = None
         error = None
         username = ""
         password = ""
@@ -48,16 +64,10 @@ let initModel =
     }
 
 /// Remote service definition.
-type BookService =
+type ConfigurationMetadataService =
     {
-        /// Get the list of all books in the collection.
-        getBooks: unit -> Async<Book[]>
-
-        /// Add a book in the collection.
-        addBook: Book -> Async<unit>
-
-        /// Remove a book from the collection, identified by its ISBN.
-        removeBookByIsbn: string -> Async<unit>
+        /// Get the list of all configurationMetadatas in the collection.
+        getConfigurationMetadatas: unit -> Async<ConfigurationMetadata[]>
 
         /// Sign into the application.
         signIn : string * string -> Async<option<string>>
@@ -70,7 +80,7 @@ type BookService =
     }
 
     interface IRemoteService with
-        member this.BasePath = "/books"
+        member _.BasePath = "/configurationMetadatas"
 
 /// The Elmish application's update messages.
 type Message =
@@ -78,8 +88,9 @@ type Message =
     | Increment
     | Decrement
     | SetCounter of int
-    | GetBooks
-    | GotBooks of Book[]
+    | GetConfigurationMetadatas
+    | GotConfigurationMetadatas of ConfigurationMetadata[]
+    | CreateNewConfiguration of ConfigurationMetadata
     | SetUsername of string
     | SetPassword of string
     | GetSignedInAs
@@ -93,7 +104,7 @@ type Message =
 
 let update remote message model =
     let onSignIn = function
-        | Some _ -> Cmd.ofMsg GetBooks
+        | Some _ -> Cmd.ofMsg GetConfigurationMetadatas
         | None -> Cmd.none
     match message with
     | SetPage page ->
@@ -106,12 +117,17 @@ let update remote message model =
     | SetCounter value ->
         { model with counter = value }, Cmd.none
 
-    | GetBooks ->
-        let cmd = Cmd.OfAsync.either remote.getBooks () GotBooks Error
-        { model with books = None }, cmd
-    | GotBooks books ->
-        { model with books = Some books }, Cmd.none
+    | GetConfigurationMetadatas ->
+        let cmd = Cmd.OfAsync.either remote.getConfigurationMetadatas () GotConfigurationMetadatas Error
+        { model with configurationMetadatas = None }, cmd
+    | GotConfigurationMetadatas data ->
+        { model with configurationMetadatas = Some data }, Cmd.none
 
+    | CreateNewConfiguration conf ->
+        let projectNamePrefix = match model.signedInAs with
+                                | None -> ""
+                                | Some userName -> sprintf "%s " userName
+        { model with configuration = Some { configurationProjectName = sprintf "%s%s" projectNamePrefix conf.name}}, Cmd.none
     | SetUsername s ->
         { model with username = s }, Cmd.none
     | SetPassword s ->
@@ -127,7 +143,7 @@ let update remote message model =
     | SendSignOut ->
         model, Cmd.OfAsync.either remote.signOut () (fun () -> RecvSignOut) Error
     | RecvSignOut ->
-        { model with signedInAs = None; signInFailed = false }, Cmd.none
+        { model with signedInAs = None; signInFailed = false; configuration = None }, Cmd.none
 
     | Error RemoteUnauthorizedException ->
         { model with error = Some "You have been logged out."; signedInAs = None }, Cmd.none
@@ -141,8 +157,12 @@ let router = Router.infer SetPage (fun model -> model.page)
 
 type Main = Template<"wwwroot/main.html">
 
-let homePage model dispatch =
-    Main.Home().Elt()
+let homePage model _dispatch =
+    Main.Home()
+        .Title(match model.configuration with
+               | Some { configurationProjectName = configurationProjectName } -> configurationProjectName
+               | None -> "No Project yet.")
+        .Elt()
 
 let counterPage model dispatch =
     Main.Counter()
@@ -153,19 +173,20 @@ let counterPage model dispatch =
 
 let dataPage model (username: string) dispatch =
     Main.Data()
-        .Reload(fun _ -> dispatch GetBooks)
+        .Reload(fun _ -> dispatch GetConfigurationMetadatas)
         .Username(username)
         .SignOut(fun _ -> dispatch SendSignOut)
-        .Rows(cond model.books <| function
+        .Rows(cond model.configurationMetadatas <| function
             | None ->
                 Main.EmptyData().Elt()
-            | Some books ->
-                forEach books <| fun book ->
+            | Some data ->
+                forEach data <| fun conf ->
                     tr [] [
-                        td [] [text book.title]
-                        td [] [text book.author]
-                        td [] [text (book.publishDate.ToString("yyyy-MM-dd"))]
-                        td [] [text book.isbn]
+                        td []
+                           [a [on.click <| fun _ -> CreateNewConfiguration conf |> dispatch]
+                              [text conf.name]]
+                        td [] [textf "%d parameters" conf.languageIndependent.Length]
+                        td [] [textf "%d parameters" conf.languageDependent.Length]
                     ])
         .Elt()
 
@@ -196,8 +217,10 @@ let view model dispatch =
     Main()
         .Menu(concat [
             menuItem model Home "Home"
-            menuItem model Counter "Counter"
-            menuItem model Data "Download data"
+            menuItem model Data "New configuration"
+            cond model.configuration <| function
+            | None -> empty
+            | Some x -> menuItem model Counter x.configurationProjectName
         ])
         .Body(
             cond model.page <| function
@@ -223,8 +246,8 @@ type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
     override this.Program =
-        let bookService = this.Remote<BookService>()
-        let update = update bookService
+        let configurationMetadataService = this.Remote<ConfigurationMetadataService>()
+        let update = update configurationMetadataService
         Program.mkProgram (fun _ -> initModel, Cmd.ofMsg GetSignedInAs) update view
         |> Program.withRouter router
 #if DEBUG

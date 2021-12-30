@@ -1,0 +1,87 @@
+[
+    {
+        "name": "Config 1",
+        "languageIndependent": [
+            {
+                "name": "param1",
+                "uiName": "Parameter One",
+                "description": "This is the first parameter!",
+                "type'": "string",
+                "prefix": "prefix1",
+                "min": 5,
+                "max": 10
+            },
+            {
+                "name": "param2",
+                "uiName": "Second Parameter",
+                "description": "This is the second parameter that is also a string.",
+                "type'": "string",
+                "prefix": "prefix2",
+                "min": 3
+            }
+        ],
+        "languageDependent": [
+            {
+                "name": "param3",
+                "uiName": "Parameter Three",
+                "description": "This is the first boolean parameter! But also the thirs parameter in the config.",
+                "type'": "bool"
+            },
+            {
+                "name": "param4",
+                "uiName": "Fourth Parameter",
+                "description": "This is the fourth parameter: the first language dependent string.",
+                "type'": "string",
+                "min": 3
+            },
+            {
+                "name": "param5",
+                "uiName": "Fifth Parameter",
+                "description": "This is another parameter: the second language dependent string.",
+                "type'": "string",
+                "prefix": "p4",
+                "min": 4,
+                "max": 7
+            }
+        ]        
+    },
+    {
+        "name": "Config 2",
+        "languageDependent": [
+            {
+                "name": "param1",
+                "uiName": "Parameter One",
+                "description": "This is the first parameter: an int!",
+                "type'": "int",
+                "min": 5,
+                "max": 10
+            },
+            {
+                "name": "param2",
+                "uiName": "Second Parameter",
+                "description": "This is the second parameter that is a string but not an int.",
+                "type'": "string",
+                "prefix": "prefix2",
+                "min": 3
+            }
+        ],
+        "languageIndependent": [
+            {
+                "name": "param3",
+                "uiName": "Parameter Three",
+                "description": "This is the third parameter: an int!",
+                "type'": "int",
+                "min": 5,
+                "max": 10
+            },
+            {
+                "name": "param4",
+                "uiName": "Fourth Parameter",
+                "description": "This is the fourth parameter that is a string but not an int.",
+                "type'": "string",
+                "prefix": "p4",
+                "max": 6
+            }
+        ]
+    }
+]
