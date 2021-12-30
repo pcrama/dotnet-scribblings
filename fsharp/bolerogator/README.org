@@ -1,0 +1,18 @@
+* One time: add new template type
+#+begin_src shell
+  dotnet new -i Bolero.Templates
+#+end_src
+
+* Create demo project
+#+begin_src shell
+  dotnet new bolero-app -o bolerogator
+#+end_src
+
+* Running
+#+begin_src shell
+  dotnet run --project src/bolerogator.Server/
+#+end_src
+
+Among other output, find server's URL:
+: Now listening on: http://localhost:5000
+: Now listening on: https://localhost:5001
