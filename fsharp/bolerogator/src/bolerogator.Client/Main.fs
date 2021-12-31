@@ -7,6 +7,8 @@ open Bolero.Remoting
 open Bolero.Remoting.Client
 open Bolero.Templating.Client
 
+open Parameter
+
 /// Routing endpoints definition.
 type Page =
     | [<EndPoint "/">] Home
@@ -30,24 +32,16 @@ type Model =
 and Configuration =
     {
         configurationProjectName: string
-    }
-
-and ParameterMetadata =
-    {
-        name: string
-        uiName: string
-        description: string
-        type': string // "string" | "int" | "bool"
-        prefix: string option // only makes sense for type' = "string"
-        min: int option // min length for "string", minimum value for "int"
-        max: int option // max length for "string", minimum value for "int"
+        Languages: string list
+        LanguageDependent: LanguageParameter list
+        Parameters: IndependentParameter list
     }
 
 and ConfigurationMetadata =
     {
         name: string
-        languageIndependent: ParameterMetadata[]
-        languageDependent: ParameterMetadata[]
+        languageIndependent: ParameterMetadata list
+        languageDependent: ParameterMetadata list
     }
 
 let initModel =
@@ -102,6 +96,20 @@ type Message =
     | Error of exn
     | ClearError
 
+let tryCreateFreshConfiguration conf name =
+    traverse tryCreateLanguageIndependent conf.languageIndependent
+    |> Result.bind
+        (fun languageIndependents ->
+         traverse tryCreateLanguageDependent conf.languageDependent
+         |> Result.map
+             (fun languageDependents ->
+              {
+                  configurationProjectName = name
+                  Languages = ["English"]
+                  Parameters = languageIndependents
+                  LanguageDependent = languageDependents
+              }))
+
 let update remote message model =
     let onSignIn = function
         | Some _ -> Cmd.ofMsg GetConfigurationMetadatas
@@ -127,7 +135,12 @@ let update remote message model =
         let projectNamePrefix = match model.signedInAs with
                                 | None -> ""
                                 | Some userName -> sprintf "%s " userName
-        { model with configuration = Some { configurationProjectName = sprintf "%s%s" projectNamePrefix conf.name}}, Cmd.none
+        match sprintf "%s%s" projectNamePrefix conf.name |> tryCreateFreshConfiguration conf with
+        | Result.Ok configuration ->
+            { model with configuration = Some configuration; error = None }
+        | Result.Error message ->
+            { model with error = Some message; configuration = None }
+        , Cmd.none
     | SetUsername s ->
         { model with username = s }, Cmd.none
     | SetPassword s ->

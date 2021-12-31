@@ -8,6 +8,7 @@
                 "description": "This is the first parameter!",
                 "type'": "string",
                 "prefix": "prefix1",
+                "value": "prefix1 param1",
                 "min": 5,
                 "max": 10
             },
@@ -17,7 +18,8 @@
                 "description": "This is the second parameter that is also a string.",
                 "type'": "string",
                 "prefix": "prefix2",
-                "min": 3
+                "min": 3,
+                "value": "invalid initial value"
             }
         ],
         "languageDependent": [
@@ -25,13 +27,15 @@
                 "name": "param3",
                 "uiName": "Parameter Three",
                 "description": "This is the first boolean parameter! But also the thirs parameter in the config.",
-                "type'": "bool"
+                "type'": "bool",
+                "value": "true"
             },
             {
                 "name": "param4",
                 "uiName": "Fourth Parameter",
                 "description": "This is the fourth parameter: the first language dependent string.",
                 "type'": "string",
+                "value": "p4",
                 "min": 3
             },
             {
@@ -39,7 +43,8 @@
                 "uiName": "Fifth Parameter",
                 "description": "This is another parameter: the second language dependent string.",
                 "type'": "string",
-                "prefix": "p4",
+                "prefix": "p5",
+                "value": "p5 is much too long",
                 "min": 4,
                 "max": 7
             }
@@ -53,6 +58,7 @@
                 "uiName": "Parameter One",
                 "description": "This is the first parameter: an int!",
                 "type'": "int",
+                "value": "7",
                 "min": 5,
                 "max": 10
             },
@@ -62,6 +68,7 @@
                 "description": "This is the second parameter that is a string but not an int.",
                 "type'": "string",
                 "prefix": "prefix2",
+                "value": "prefix is incorrect",
                 "min": 3
             }
         ],
@@ -71,6 +78,7 @@
                 "uiName": "Parameter Three",
                 "description": "This is the third parameter: an int!",
                 "type'": "int",
+                "value": "1234",
                 "min": 5,
                 "max": 10
             },
@@ -80,6 +88,7 @@
                 "description": "This is the fourth parameter that is a string but not an int.",
                 "type'": "string",
                 "prefix": "p4",
+                "value": "p4: OK",
                 "max": 6
             }
         ]
