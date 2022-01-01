@@ -58,6 +58,25 @@
         </ul>
       </template>
 
+      <template id="Common">
+        <h1 class="title">Common Configuration Options</h1>
+        <ul>
+          ${IndependentParameters}
+        </ul>
+      </template>
+
+      <template id="TextInput">
+        <input class="input" type="text" bind="${Value}" id="${Id}" />
+      </template>
+
+      <template id="NumberInput">
+        <input class="input" type="number" bind="${Value}" id="${Id}" />
+      </template>
+
+      <template id="BoolInput">
+        <input type="checkbox" bind="${Value}" id="${Id}" />
+      </template>
+
       <template id="Data">
         <h1 class="title">
           Create new configuration

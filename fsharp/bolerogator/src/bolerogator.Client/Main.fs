@@ -13,6 +13,7 @@ open Parameter
 type Page =
     | [<EndPoint "/">] Home
     | [<EndPoint "/general">] General
+    | [<EndPoint "/common">] Common
     | [<EndPoint "/data">] Data
 
 /// The Elmish application's model.
@@ -82,6 +83,9 @@ type Message =
     | CreateNewConfiguration of ConfigurationMetadata
     | SetLanguageOrder of string list
     | SetProjectName of string
+    | SetBool of string * string Option * bool
+    | SetString of string * string Option * string
+    | SetInt32 of string * string Option * int32
     | SetUsername of string
     | SetPassword of string
     | GetSignedInAs
@@ -142,6 +146,15 @@ let updateConfigurationInModel model (uc: Configuration -> Configuration): Model
         model
         , System.Exception("No configuration to update.") |> Error |> Cmd.ofMsg
 
+let replaceIndependentParameters (model: Model) (name: string) (clone: IndependentParameter -> IndependentParameter) =
+    updateConfigurationInModel model <| fun conf ->
+        {conf with Parameters = replaceByCloneIfNameMatch name clone conf.Parameters }
+
+let replaceLanguageParameters (model: Model) (language: string) (name: string) (clone: int -> LanguageParameter -> LanguageParameter) =
+    updateConfigurationInModel model <| fun conf ->
+        let idx = findLanguage language conf.Languages
+        { conf with LanguageDependent = replaceByCloneIfNameMatch name (clone idx) conf.LanguageDependent }
+
 let update remote _jsRuntime message model =
     let onSignIn = function
         | Some _ -> Cmd.ofMsg GetConfigurationMetadatas
@@ -177,6 +190,24 @@ let update remote _jsRuntime message model =
     | SetProjectName newProjectName ->
         updateConfigurationInModel model <| fun configuration ->
             { configuration with configurationProjectName = newProjectName }
+    | SetString (name, None, newValue) ->
+        let clone p = IndependentParameter(p, newValue)
+        replaceIndependentParameters model name clone
+    | SetString (name, Some language, newValue) ->
+        let clone idx p = LanguageParameter(p, idx, newValue)
+        replaceLanguageParameters model language name clone
+    | SetInt32 (name, None, newValue) ->
+        let clone p = IndependentParameter(p, newValue)
+        replaceIndependentParameters model name clone
+    | SetInt32 (name, Some language, newValue) ->
+        let clone idx p = LanguageParameter(p, idx, newValue)
+        replaceLanguageParameters model language name clone
+    | SetBool (name, None, newValue) ->
+        let clone p = IndependentParameter(p, newValue)
+        replaceIndependentParameters model name clone
+    | SetBool (name, Some language, newValue) ->
+        let clone idx p = LanguageParameter(p, idx, newValue)
+        replaceLanguageParameters model language name clone
 
     | SetUsername s ->
         { model with username = s }, Cmd.none
@@ -216,6 +247,63 @@ let homePage model _dispatch =
     Main.Home()
         .Title(configurationProjectName model)
         .Elt()
+
+let getInputId p l =
+    match l with
+    | None -> (p :> INamedParameter).Name |> sprintf "input-common-%s"
+    | Some n -> (p :> INamedParameter).Name |> sprintf "input-%s-%s" n
+
+let limitingToInt32OnChange (setInt32: int -> Message) (onChange: Message -> unit) (newValue: int): unit =
+    printfn "New value: %d" newValue
+    if (System.Int32.MinValue <= newValue) && (newValue <= System.Int32.MaxValue)
+    then newValue |> setInt32 |> onChange
+    else System.Exception(sprintf "%d overflows." newValue) |> Error |> onChange
+
+let renderParameterInput
+        (p: MinimalParameter)
+        (id: string)
+        (setString: string -> Message)
+        (setInt32: int -> Message)
+        (setBool: bool -> Message)
+        (onChange: Message -> unit) =
+    match (p :> IValidatableParameter).ValueAndDefault with
+    | I { Value = i } ->
+        Main.NumberInput()
+            .Id(id)
+            .Value(i, limitingToInt32OnChange setInt32 onChange)
+            .Elt()
+    | S { Value = s } ->
+        Main.TextInput()
+            .Id(id)
+            .Value(s,
+                   fun s ->
+                       printfn "Changing string %s to %s" (p :> INamedParameter).Name s
+                       setString s |> onChange)
+            .Elt()
+    | B { Value = b } ->
+        Main.BoolInput()
+            .Id(id)
+            .Value(b, setBool >> onChange)
+            .Elt()
+
+let commonPage model dispatch =
+    match model with
+    | { configuration = None } -> text "Internal error."
+    | { configuration = Some configuration } ->
+        Main.Common()
+            .IndependentParameters(
+                forEach configuration.Parameters <| fun p ->
+                    let inputId = getInputId p None
+                    let named = p :> INamedParameter
+                    li [] [
+                        label [attr.``for`` inputId] [text p.Description]
+                        renderParameterInput (new MinimalParameter(p))
+                                             inputId
+                                             (fun v -> SetString (named.Name, None, v))
+                                             (fun i -> SetInt32 (named.Name, None, i))
+                                             (fun b -> SetBool (named.Name, None, b))
+                                             dispatch])
+            .Elt()
 
 let generalPage model dispatch =
     let removeIdx idx xs =
@@ -305,12 +393,18 @@ let view model dispatch =
             menuItem model Data "New configuration"
             cond model.configuration <| function
             | None -> empty
-            | Some x -> menuItem model General x.configurationProjectName
+            | Some x ->
+                forEach
+                    [(General, x.configurationProjectName)
+                     (Common, "Common parameters")]
+                    <| fun (page, menuName) ->
+                        menuItem model page menuName
         ])
         .Body(
             cond model.page <| function
             | Home -> homePage model dispatch
             | General -> generalPage model dispatch
+            | Common -> commonPage model dispatch
             | Data ->
                 cond model.signedInAs <| function
                 | Some username -> dataPage model username dispatch

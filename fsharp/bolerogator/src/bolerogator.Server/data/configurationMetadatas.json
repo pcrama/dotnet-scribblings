@@ -20,6 +20,20 @@
                 "prefix": "prefix2",
                 "min": 3,
                 "value": "invalid initial value"
+            },
+            {
+                "name": "param5",
+                "uiName": "Parameter number 5",
+                "description": "This is the fifth parameter: a bool.",
+                "value": "true",
+                "type'": "bool"
+            },
+            {
+                "name": "param6",
+                "uiName": "Parameter number 6",
+                "description": "This is also a bool.",
+                "value": "false",
+                "type'": "bool"
             }
         ],
         "languageDependent": [
@@ -87,6 +101,58 @@
                 "uiName": "Fourth Parameter",
                 "description": "This is the fourth parameter that is a string but not an int.",
                 "type'": "string",
+                "prefix": "p4",
+                "value": "p4: OK",
+                "max": 6
+            }
+        ]
+    },
+    {
+        "name": "Config 3 (invalid)",
+        "languageDependent": [
+            {
+                "name": "param1",
+                "uiName": "Parameter One",
+                "description": "This is the first parameter: an int!",
+                "type'": "int",
+                "value": "7",
+                "min": 5,
+                "max": 10
+            },
+            {
+                "name": "param2",
+                "uiName": "Second Parameter",
+                "description": "This is the second parameter that is a string but not an int.",
+                "type'": "string",
+                "prefix": "prefix2",
+                "value": "prefix is incorrect",
+                "min": 3
+            }
+        ],
+        "languageIndependent": [
+            {
+                "name": "param3",
+                "uiName": "Parameter Three",
+                "description": "This is the third parameter: an int!",
+                "type'": "int",
+                "value": "1234",
+                "min": 5,
+                "max": 10
+            },
+            {
+                "name": "param4",
+                "uiName": "Fourth Parameter",
+                "description": "This is the fourth parameter that is a string but not an int.",
+                "type'": "string",
+                "prefix": "p4",
+                "value": "p4: OK",
+                "max": 6
+            },
+            {
+                "name": "param5",
+                "uiName": "Parameter number 5",
+                "description": "This is the fifth parameter: a bool.",
+                "type'": "bool",
                 "prefix": "p4",
                 "value": "p4: OK",
                 "max": 6
