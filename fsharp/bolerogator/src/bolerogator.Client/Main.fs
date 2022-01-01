@@ -12,14 +12,13 @@ open Parameter
 /// Routing endpoints definition.
 type Page =
     | [<EndPoint "/">] Home
-    | [<EndPoint "/counter">] Counter
+    | [<EndPoint "/general">] General
     | [<EndPoint "/data">] Data
 
 /// The Elmish application's model.
 type Model =
     {
         page: Page
-        counter: int
         configurationMetadatas: ConfigurationMetadata[] option
         configuration: Configuration option
         error: string option
@@ -47,7 +46,6 @@ and ConfigurationMetadata =
 let initModel =
     {
         page = Home
-        counter = 0
         configurationMetadatas = None
         configuration = None
         error = None
@@ -79,12 +77,11 @@ type ConfigurationMetadataService =
 /// The Elmish application's update messages.
 type Message =
     | SetPage of Page
-    | Increment
-    | Decrement
-    | SetCounter of int
     | GetConfigurationMetadatas
     | GotConfigurationMetadatas of ConfigurationMetadata[]
     | CreateNewConfiguration of ConfigurationMetadata
+    | SetLanguageOrder of string list
+    | SetProjectName of string
     | SetUsername of string
     | SetPassword of string
     | GetSignedInAs
@@ -100,30 +97,58 @@ let tryCreateFreshConfiguration conf name =
     traverse tryCreateLanguageIndependent conf.languageIndependent
     |> Result.bind
         (fun languageIndependents ->
-         traverse tryCreateLanguageDependent conf.languageDependent
+         let languages = ["English"; "Dutch"; "German"; "French"; "Spanish"; "Italian"]
+         conf.languageDependent
+         |> (List.length languages |> tryCreateLanguageDependent |> traverse)
          |> Result.map
              (fun languageDependents ->
               {
                   configurationProjectName = name
-                  Languages = ["English"]
+                  Languages = languages
                   Parameters = languageIndependents
                   LanguageDependent = languageDependents
               }))
 
-let update remote jsRuntime message model =
+let findLanguage lang =
+    List.findIndex (fun x -> x = lang)
+
+let reshuffleLanguages
+        (oldLangs: string list)
+        (data: LanguageParameter list)
+        (newLangs : string list)
+        : LanguageParameter list =
+    let indices = List.map (fun newLang -> findLanguage newLang oldLangs) newLangs
+    let shuffle (xs: 'a array): 'a array =
+        [| for idx in indices -> xs.[idx] |]
+    let shuffleVD { Default = ds; Value = vs } = { Default = shuffle ds; Value = shuffle vs }
+    let shuffleValuesAndDefaults = function
+        | Ss ss -> shuffleVD ss |> Ss
+        | Is is -> shuffleVD is |> Is
+        | Bs bs -> shuffleVD bs |> Bs
+    let shuffleParameter (p: LanguageParameter) =
+        new LanguageParameter(
+            p,
+            shuffleValuesAndDefaults p.ValuesAndDefaults,
+            p.Description,
+            p.ValidationRules)
+    List.map shuffleParameter data
+
+let updateConfigurationInModel model (uc: Configuration -> Configuration): Model * Cmd<Message> =
+    match model with
+    | { configuration = Some configuration } ->
+        { model with configuration = uc configuration |> Some }
+        , Cmd.none
+    | { configuration = None } ->
+        model
+        , System.Exception("No configuration to update.") |> Error |> Cmd.ofMsg
+
+let update remote _jsRuntime message model =
     let onSignIn = function
         | Some _ -> Cmd.ofMsg GetConfigurationMetadatas
         | None -> Cmd.none
     match message with
     | SetPage page ->
         { model with page = page }, Cmd.none
-
-    | Increment ->
-        { model with counter = model.counter + 1 }, Cmd.none
-    | Decrement ->
-        { model with counter = model.counter - 1 }, Cmd.none
-    | SetCounter value ->
-        { model with counter = value }, Cmd.OfJS.either jsRuntime "MyJsLib.focusById" [| value % 2 |> sprintf "p%d" |] (fun _ -> ClearError) Error
 
     | GetConfigurationMetadatas ->
         let cmd = Cmd.OfAsync.either remote.getConfigurationMetadatas () GotConfigurationMetadatas Error
@@ -141,6 +166,18 @@ let update remote jsRuntime message model =
         | Result.Error message ->
             { model with error = Some message; configuration = None }
         , Cmd.none
+    | SetLanguageOrder newLanguages ->
+        updateConfigurationInModel model <| fun configuration ->
+            let newDependents = reshuffleLanguages configuration.Languages
+                                                   configuration.LanguageDependent
+                                                   newLanguages
+            { configuration with
+                  Languages = newLanguages
+                  LanguageDependent = newDependents }
+    | SetProjectName newProjectName ->
+        updateConfigurationInModel model <| fun configuration ->
+            { configuration with configurationProjectName = newProjectName }
+
     | SetUsername s ->
         { model with username = s }, Cmd.none
     | SetPassword s ->
@@ -170,18 +207,53 @@ let router = Router.infer SetPage (fun model -> model.page)
 
 type Main = Template<"wwwroot/main.html">
 
+let configurationProjectName = function
+    | { configuration = Some { configurationProjectName = configurationProjectName } } ->
+        configurationProjectName
+    | { configuration = None } -> "No Project yet."
+
 let homePage model _dispatch =
     Main.Home()
-        .Title(match model.configuration with
-               | Some { configurationProjectName = configurationProjectName } -> configurationProjectName
-               | None -> "No Project yet.")
+        .Title(configurationProjectName model)
         .Elt()
 
-let counterPage model dispatch =
-    Main.Counter()
-        .Decrement(fun _ -> dispatch Decrement)
-        .Increment(fun _ -> dispatch Increment)
-        .Value(model.counter, fun v -> dispatch (SetCounter v))
+let generalPage model dispatch =
+    let removeIdx idx xs =
+        List.indexed xs
+        |> List.filter (fun (otherIdx, _) -> otherIdx <> idx)
+        |> List.map snd
+    let languages =
+        match model with
+        | { configuration = Some { Languages = languageNames } } ->
+            let mayNotRemove = match languageNames with
+                               | []
+                               | [_] -> true
+                               | _ -> false
+            forEach (List.indexed languageNames) <| fun (idx, langName) ->
+                li [] [
+                    button [yield on.click <| fun _ -> if (idx > 0)
+                                                       then langName::removeIdx idx languageNames
+                                                            |> SetLanguageOrder
+                                                            |> dispatch
+                                                       else ()
+                            yield attr.``class`` "button"
+                            if idx = 0 then yield attr.disabled "disabled"]
+                           [text "To top"]
+                    text langName
+                    button [yield on.click <| fun _ -> match removeIdx idx languageNames with
+                                                       | [] -> printfn "Can't remove last language"
+                                                       | lessLanguages -> 
+                                                            SetLanguageOrder lessLanguages
+                                                            |> dispatch
+                            yield attr.``class`` "button"
+                            if mayNotRemove then yield attr.disabled "disabled"]
+                           [text "Remove"]]
+        | { configuration = None } -> Empty
+    Main.General()
+        .ConfigurationProjectName(
+            configurationProjectName model,
+            SetProjectName >> dispatch)
+        .Languages(languages)
         .Elt()
 
 let dataPage model (username: string) dispatch =
@@ -233,12 +305,12 @@ let view model dispatch =
             menuItem model Data "New configuration"
             cond model.configuration <| function
             | None -> empty
-            | Some x -> menuItem model Counter x.configurationProjectName
+            | Some x -> menuItem model General x.configurationProjectName
         ])
         .Body(
             cond model.page <| function
             | Home -> homePage model dispatch
-            | Counter -> counterPage model dispatch
+            | General -> generalPage model dispatch
             | Data ->
                 cond model.signedInAs <| function
                 | Some username -> dataPage model username dispatch

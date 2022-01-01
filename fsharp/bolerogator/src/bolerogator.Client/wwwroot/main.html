@@ -44,18 +44,18 @@
         </div>
       </template>
 
-      <template id="Counter">
-        <h1 class="title">A simple counter</h1>
-        <p>
-          <button onclick="${Decrement}" class="button">-</button>
-          <input type="number" id="counter" class="input" bind="${Value}">
-          <button onclick="${Increment}" class="button">+</button>
-          <input type="checkbox" id="p1" class="input" value="p1">
-          <input type="text" id="p0" class="input" value="p0 text">
-        </p>
-        <p>
-          The counter's value is: ${Value}
-        </p>
+      <template id="General">
+        <h1 class="title">General Configuration Options</h1>
+        <ul>
+          <li>
+            <label for="general-configuration-options-configuration-project-name">Project name</label>
+            <input type="text"
+                   id="general-configuration-options-configuration-project-name"
+                   class="input"
+                   bind="${ConfigurationProjectName}">
+          </li>
+          ${Languages}
+        </ul>
       </template>
 
       <template id="Data">

@@ -400,12 +400,13 @@ let tryCreateLanguageIndependent (pmDirty: ParameterMetadata): Result<Independen
                                     else " "
                         sprintf "Error while validating%s%s metadata: %s." blank name s)
 
-let tryCreateLanguageDependent (pmDirty: ParameterMetadata): Result<LanguageParameter, string> =
+let tryCreateLanguageDependent (count: int) (pmDirty: ParameterMetadata): Result<LanguageParameter, string> =
     tryCreateLanguageIndependent pmDirty
     |> Result.map
         (fun p ->
          let validatable = p :> IValidatableParameter
-         let arrayify wrap { Value = v ; Default = d } = wrap { Value = [| v |]; Default = [| d |] }
+         let arrayify wrap { Value = v ; Default = d } =
+             wrap { Value = Array.create count v; Default = Array.create count d }
          let valuesAndDefaults =
              match validatable.ValueAndDefault with
              | S vad -> arrayify Ss vad
