@@ -11,14 +11,15 @@ open bolerogator
 type ConfigurationMetadataService(ctx: IRemoteContext, env: IWebHostEnvironment) =
     inherit RemoteHandler<Client.Main.ConfigurationMetadataService>()
 
-    let configurationMetadatas =
-        let json = Path.Combine(env.ContentRootPath, "data/configurationMetadatas.json") |> File.ReadAllText
-        JsonSerializer.Deserialize<Client.Main.ConfigurationMetadata[]>(json)
-        |> ResizeArray
-
     override _.Handler =
         {
             getConfigurationMetadatas = ctx.Authorize <| fun () -> async {
+                let! json = Path.Combine(env.ContentRootPath, "data/configurationMetadatas.json")
+                            |> File.ReadAllTextAsync
+                            |> Async.AwaitTask
+                let configurationMetadatas =
+                    JsonSerializer.Deserialize<Client.Main.ConfigurationMetadata[]>(json)
+                    |> ResizeArray
                 return configurationMetadatas.ToArray()
             }
 
