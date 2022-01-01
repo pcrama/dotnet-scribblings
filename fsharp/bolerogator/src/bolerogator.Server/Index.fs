@@ -13,6 +13,11 @@ let page = doctypeHtml [] [
         ``base`` [attr.href "/"]
         link [attr.rel "stylesheet"; attr.href "https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css"]
         link [attr.rel "stylesheet"; attr.href "css/index.css"]
+        script [] [
+            // Not the most practical way: it would be better to <script src="external-file.js"></script>,
+            // but this is shorter.
+            text "window.MyJsLib = window.MyJsLib || { focusById: function(id) { console.log(`focusById ${id}`); document.getElementById(id)?.focus(); } };"
+        ]
     ]
     body [] [
         nav [attr.classes ["navbar"; "is-dark"]; "role" => "navigation"; attr.aria "label" "main navigation"] [

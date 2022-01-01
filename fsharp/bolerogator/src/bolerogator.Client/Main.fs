@@ -110,7 +110,7 @@ let tryCreateFreshConfiguration conf name =
                   LanguageDependent = languageDependents
               }))
 
-let update remote message model =
+let update remote jsRuntime message model =
     let onSignIn = function
         | Some _ -> Cmd.ofMsg GetConfigurationMetadatas
         | None -> Cmd.none
@@ -123,7 +123,7 @@ let update remote message model =
     | Decrement ->
         { model with counter = model.counter - 1 }, Cmd.none
     | SetCounter value ->
-        { model with counter = value }, Cmd.none
+        { model with counter = value }, Cmd.OfJS.either jsRuntime "MyJsLib.focusById" [| value % 2 |> sprintf "p%d" |] (fun _ -> ClearError) Error
 
     | GetConfigurationMetadatas ->
         let cmd = Cmd.OfAsync.either remote.getConfigurationMetadatas () GotConfigurationMetadatas Error
@@ -260,7 +260,7 @@ type MyApp() =
 
     override this.Program =
         let configurationMetadataService = this.Remote<ConfigurationMetadataService>()
-        let update = update configurationMetadataService
+        let update = update configurationMetadataService this.JSRuntime
         Program.mkProgram (fun _ -> initModel, Cmd.ofMsg GetSignedInAs) update view
         |> Program.withRouter router
 #if DEBUG
