@@ -48,14 +48,15 @@
         <h1 class="title">General Configuration Options</h1>
         <ul>
           <li>
-            <label for="general-configuration-options-configuration-project-name">Project name</label>
+            <label for="input-general-configuration-options-configuration-project-name">Project name</label>
             <input type="text"
-                   id="general-configuration-options-configuration-project-name"
+                   id="input-general-configuration-options-configuration-project-name"
                    class="input"
                    bind="${ConfigurationProjectName}">
           </li>
           ${Languages}
         </ul>
+        ${ParameterValidationResults}
       </template>
 
       <template id="Common">
@@ -63,18 +64,18 @@
         <ul>
           ${IndependentParameters}
         </ul>
+        ${ParameterValidationResults}
       </template>
 
-      <template id="TextInput">
-        <input class="input" type="text" bind="${Value}" id="${Id}" />
-      </template>
-
-      <template id="NumberInput">
-        <input class="input" type="number" bind="${Value}" id="${Id}" />
-      </template>
-
-      <template id="BoolInput">
-        <input type="checkbox" bind="${Value}" id="${Id}" />
+      <template id="ParameterValidationResults">
+        <div class="${HiddenWhenValidationErrors}">
+          No validation errors.
+        </div>
+        <div class="${VisibleWhenValidationErrors}">
+          <ul>
+            ${ValidationErrors}
+          </ul>
+        </div>
       </template>
 
       <template id="Data">

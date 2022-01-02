@@ -17,8 +17,6 @@ let replaceValueInClone (src: VD<'t array>) (idx: int) (elt: 't): VD<'t array> =
     Array.set newArray idx elt
     { src with Value = newArray }
 
-type ParameterLinkInformation = { Language: string option; Name: string; Message: string }
-
 type INamedParameter =
     abstract member Name: string
     abstract member UiName: string
@@ -32,7 +30,7 @@ type IValidatableParameter =
     inherit INamedParameter
     abstract member ValueAndDefault: ValueAndDefault
     abstract member ValidationRules: ValidationRule list
-    abstract member linkify: string -> ParameterLinkInformation
+    abstract member Language: string option
 
 and IndependentParameter(name: string,
                          uiName: string,
@@ -44,8 +42,7 @@ and IndependentParameter(name: string,
         member _.UiName = uiName
         member _.ValueAndDefault = valueAndDefault
         member _.ValidationRules = validationRules
-        member this.linkify(m) =
-            { Language = None; Name = (this :> INamedParameter).Name; Message = m }
+        member _.Language = None
     member _.Description = description
     new(p: INamedParameter,
         valueAndDefault: ValueAndDefault,
@@ -205,8 +202,7 @@ and MinimalParameter(name: string, uiName: string, valueAndDefault: ValueAndDefa
         member _.UiName = uiName
         member _.ValueAndDefault = valueAndDefault
         member _.ValidationRules = validationRules
-        member this.linkify(m) =
-            { Language = forLanguage; Name = (this :> INamedParameter).Name; Message = m }
+        member _.Language = forLanguage
     new(p: IValidatableParameter) = MinimalParameter(p.Name, p.UiName, p.ValueAndDefault, p.ValidationRules, None)
     new(p: LanguageParameter, idx: int, language: string) =
         let valAndDeflt =
@@ -271,29 +267,29 @@ type ParameterMetadata =
 let validateHasStringPrefix (prefix: string) (p: INamedParameter): ValidationRule =
     let rule (ps: IValidatableParameter list) =
         extractString p.Name ps
-        |> applyOnOK (sprintf "Type error: '%s' is not a string." p.UiName)
+        |> applyOnOK (sprintf "Type error: '<<%s>>' is not a string." p.Name)
                      (fun s -> if s.StartsWith(prefix)
                                then ""
-                               else sprintf "'%s' should start with '%s'." p.UiName prefix)
+                               else sprintf "'<<%s>>' should start with '%s'." p.Name prefix)
     rule
 
 let validateHasMinMaxLength (min: int) (max: int) (p: INamedParameter): ValidationRule =
     let rule (ps: IValidatableParameter list) =
         extractString p.Name ps
-        |> applyOnOK (sprintf "Type error: '%s' is not a string." p.UiName)
+        |> applyOnOK (sprintf "Type error: '<<%s>>' is not a string." p.Name)
                      (fun s -> let len = s.Length
                                if ((min <= len) && (len <= max))
                                then ""
-                               else sprintf "'%s' should be between %d and %d characters." p.UiName min max)
+                               else sprintf "'<<%s>>' should be between %d and %d characters." p.Name min max)
     rule
 
 let validateHasMinMaxValue (min: int) (max: int) (p: INamedParameter): ValidationRule =
     let rule (ps: IValidatableParameter list) =
         extractInt32 p.Name ps
-        |> applyOnOK (sprintf "Type error: '%s' is not an int." p.UiName)
+        |> applyOnOK (sprintf "Type error: '<<%s>>' is not an int." p.Name)
                      (fun v -> if ((min <= v) && (v <= max))
                                then ""
-                               else sprintf "'%s' should be between %d and %d." p.UiName min max)
+                               else sprintf "'<<%s>>' should be between %d and %d." p.Name min max)
     rule
 
 let validateParameterMetadata pmDirty =

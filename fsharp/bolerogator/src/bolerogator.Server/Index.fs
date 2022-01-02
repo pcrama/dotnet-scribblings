@@ -16,7 +16,7 @@ let page = doctypeHtml [] [
         script [] [
             // Not the most practical way: it would be better to <script src="external-file.js"></script>,
             // but this is shorter.
-            text "window.MyJsLib = window.MyJsLib || { focusById: function(id) { console.log(`focusById ${id}`); document.getElementById(id)?.focus(); } };"
+            text "window.MyJsLib = window.MyJsLib || { focusById: function(id) { document.getElementById(id)?.focus(); } };"
         ]
     ]
     body [] [
