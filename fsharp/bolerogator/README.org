@@ -19,10 +19,12 @@ Among other output, find server's URL:
 
 In emacs:
 #+begin_src elisp :exports code :results none
-  (let* ((project "bolerogator")
+  (let* ((window-configuration (current-window-configuration))
+         (project "bolerogator")
          (shell-command-buffer-name-async (format "*async watch run %s*" project)))
     (async-shell-command (format "dotnet watch run --project src/%s.Server/" project))
     (save-excursion
       (switch-to-buffer shell-command-buffer-name-async)
-      (compilation-shell-minor-mode +1)))
+      (compilation-shell-minor-mode +1)
+      (set-window-configuration window-configuration)))
 #+end_src
