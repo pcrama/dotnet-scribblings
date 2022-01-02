@@ -31,16 +31,7 @@
               The menu on the left switches pages based on
               <a target="_blank" href="https://fsbolero.github.io/docs/Routing">routes</a>.
             </li>
-            <li>
-              The <a href="/counter">Counter</a> page demonstrates event handlers and data binding in
-              <a target="_blank" href="https://fsbolero.github.io/docs/Templating">HTML templates</a>.
-            </li>
-            <li>
-              The <a href="/data">Download data</a> page demonstrates the use of
-              <a target="_blank" href="https://fsbolero.github.io/docs/Remoting">remote functions</a>.
-            </li>
           </ul>
-          <p>Enjoy writing awesome apps!</p>
         </div>
       </template>
 
@@ -64,6 +55,19 @@
         <ul>
           ${IndependentParameters}
         </ul>
+        ${ParameterValidationResults}
+      </template>
+
+      <template id="Dependent">
+        <h1 class="title">Language Dependent Configuration Options</h1>
+        <table class="table is-striped is-hoverable is-fullwidth">
+          <thead>
+            ${Header}
+          </thead>
+          <tbody>
+            ${Body}
+          </tbody>
+        </table>
         ${ParameterValidationResults}
       </template>
 

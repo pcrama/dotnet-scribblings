@@ -1,5 +1,7 @@
 module Parameter
 
+open System.Collections.Generic
+
 type VD<'t> = { Default : 't; Value : 't }
 
 type ValueAndDefault =
@@ -292,7 +294,7 @@ let validateHasMinMaxValue (min: int) (max: int) (p: INamedParameter): Validatio
                                else sprintf "'<<%s>>' should be between %d and %d." p.Name min max)
     rule
 
-let validateParameterMetadata pmDirty =
+let validateParameterMetadata (existing: HashSet<string>) pmDirty =
     match pmDirty with
     | { name = n } when System.String.IsNullOrWhiteSpace(n) ->
         Error "name is blank"
@@ -309,6 +311,9 @@ let validateParameterMetadata pmDirty =
     | { type' = "bool"; min = Some _ }
     | { type' = "bool"; max = Some _ } ->
         Error "min and max are not supported for type'=bool"
+    // Order of clauses matters because of this side effect: adds parameter name to set
+    | { name = n } when existing.Add(n) = false ->
+        Error "duplicate name %s"
     | _ ->
         Ok pmDirty
 
@@ -322,8 +327,8 @@ let tieValidationRules
     rulesBuilder p
     |> parameterBuilder p
 
-let tryCreateLanguageIndependent (pmDirty: ParameterMetadata): Result<IndependentParameter, string> =
-    let pmOrError = validateParameterMetadata pmDirty
+let tryCreateLanguageIndependent existing (pmDirty: ParameterMetadata): Result<IndependentParameter, string> =
+    let pmOrError = validateParameterMetadata existing pmDirty
     let buildStringValidationRules (pm: ParameterMetadata) (p: INamedParameter): ValidationRule list =
         List.concat [
             match pm.prefix with
@@ -396,8 +401,8 @@ let tryCreateLanguageIndependent (pmDirty: ParameterMetadata): Result<Independen
                                     else " "
                         sprintf "Error while validating%s%s metadata: %s." blank name s)
 
-let tryCreateLanguageDependent (count: int) (pmDirty: ParameterMetadata): Result<LanguageParameter, string> =
-    tryCreateLanguageIndependent pmDirty
+let tryCreateLanguageDependent existing (count: int) (pmDirty: ParameterMetadata): Result<LanguageParameter, string> =
+    tryCreateLanguageIndependent existing pmDirty
     |> Result.map
         (fun p ->
          let validatable = p :> IValidatableParameter

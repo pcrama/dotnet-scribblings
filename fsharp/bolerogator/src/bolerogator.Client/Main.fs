@@ -1,5 +1,7 @@
 module bolerogator.Client.Main
 
+open System.Collections.Generic
+
 open Elmish
 open Bolero
 open Bolero.Html
@@ -14,6 +16,7 @@ type Page =
     | [<EndPoint "/">] Home
     | [<EndPoint "/general">] General
     | [<EndPoint "/common">] Common
+    | [<EndPoint "/dependent">] Dependent
     | [<EndPoint "/data">] Data
 
 type ValidationMessagePart =
@@ -135,12 +138,14 @@ let weakParsingOfErrorMessage
       | [] -> None
       | h::t -> Some (h, t)
 
-let validateParameters (env: IValidatableParameter list) =
+let validateParameters
+        (uniqueErrors: HashSet<ValidationMessage>)
+        (env: IValidatableParameter list) =
     let dict = Map(seq { for p in env do yield (p.Name, p) })
     let evalRule r =
         let link name =
             let q = dict.[name]
-            let tab = if q.Language.IsNone then Common else General // FIXME
+            let tab = if q.Language.IsNone then Common else Dependent
             Link { parameter = q; language = q.Language; page = tab }
         r env
         |> weakParsingOfErrorMessage link ValidationMessagePart.Text
@@ -149,7 +154,9 @@ let validateParameters (env: IValidatableParameter list) =
             for rule in param.ValidationRules do
                 match evalRule rule with
                 | None -> ()
-                | Some x -> yield x
+                | Some x when uniqueErrors.Add(x) ->
+                    yield x
+                | Some _ -> ()
     } |> List.ofSeq
 
 let renderValidationMessage (dispatch: Message -> unit) ((fst, tail): ValidationMessage): Node =
@@ -173,6 +180,7 @@ let validateConfiguration (configuration: Configuration): Configuration =
     let validatableLanguageDependent idx languageName =
         configuration.LanguageDependent
         |> List.map (fun p -> new MinimalParameter(p, idx, languageName) :> IValidatableParameter)
+    let validateWithUniqueErrors = HashSet<ValidationMessage>() |> validateParameters
     let envs: (IValidatableParameter list) list =
         match configuration.Languages with
         | [] -> [validatableLanguageIndependent]
@@ -183,15 +191,16 @@ let validateConfiguration (configuration: Configuration): Configuration =
                                           validatableLanguageIndependent])
     { configuration
       with ValidationMessages = List.concat [errorsInGeneralTab
-                                             List.map validateParameters envs |> List.concat] }
+                                             List.map validateWithUniqueErrors envs |> List.concat] }
 
 let tryCreateFreshConfiguration conf name =
-    traverse tryCreateLanguageIndependent conf.languageIndependent
+    let uniqueNames = HashSet<string>()
+    traverse (tryCreateLanguageIndependent uniqueNames) conf.languageIndependent
     |> Result.bind
         (fun languageIndependents ->
          let languages = ["English"; "Dutch"; "German"; "French"; "Spanish"; "Italian"]
          conf.languageDependent
-         |> (List.length languages |> tryCreateLanguageDependent |> traverse)
+         |> (List.length languages |> tryCreateLanguageDependent uniqueNames |> traverse)
          |> Result.map
              (fun languageDependents ->
               {
@@ -240,7 +249,7 @@ let getInputId p l page =
     match (l, page) with
     | (None, Common) -> sprintf "input-common-%s" name
     | (None, General) -> sprintf "input-general-%s" name
-    | (Some n, _) -> sprintf "input-%s-%s" n name
+    | (Some n, Dependent) -> sprintf "input-%s-%s" n name
     | _ -> failwithf "Can't compute id for %s, %s, %s" name (Option.defaultValue "None" l) (page.ToString())
 
 let replaceIndependentParameters (model: Model) (name: string) (clone: IndependentParameter -> IndependentParameter) =
@@ -367,7 +376,6 @@ let validationPageContent (dispatch: Message -> unit) (validationMessageParts: V
         .Elt()
 
 let limitingToInt32OnChange (setInt32: int -> Message) (onChange: Message -> unit) (newValue: int): unit =
-    printfn "New value: %d" newValue
     if (System.Int32.MinValue <= newValue) && (newValue <= System.Int32.MaxValue)
     then newValue |> setInt32 |> onChange
     else System.Exception(sprintf "%d overflows." newValue) |> Error |> onChange
@@ -397,77 +405,100 @@ let renderParameterInput
                attr.``type`` "checkbox"]
     input fullAttributes
 
-let commonPage model dispatch =
+let renderOnlyWithConfiguration renderConfiguration model dispatch =
     match model with
     | { configuration = None } -> text "Internal error."
-    | { configuration = Some configuration } ->
-        Main.Common()
-            .IndependentParameters(
-                forEach configuration.Parameters <| fun p ->
-                    let inputId = getInputId p None Common
-                    let named = p :> INamedParameter
-                    li [] [
-                        label [attr.``for`` inputId] [text p.Description]
-                        renderParameterInput (new MinimalParameter(p))
-                                             inputId
-                                             (fun v -> SetString (named.Name, None, v))
-                                             (fun i -> SetInt32 (named.Name, None, i))
-                                             (fun b -> SetBool (named.Name, None, b))
-                                             dispatch])
-            .ParameterValidationResults(
-                validationPageContent dispatch configuration.ValidationMessages)
-            .Elt()
+    | { configuration = Some configuration } -> renderConfiguration configuration dispatch
+    
+let commonPage configuration dispatch =
+    Main.Common()
+        .IndependentParameters(
+            forEach configuration.Parameters <| fun p ->
+                let inputId = getInputId p None Common
+                let named = p :> INamedParameter
+                li [] [
+                    label [attr.``for`` inputId] [text p.Description]
+                    renderParameterInput (new MinimalParameter(p))
+                                         inputId
+                                         (fun v -> SetString (named.Name, None, v))
+                                         (fun i -> SetInt32 (named.Name, None, i))
+                                         (fun b -> SetBool (named.Name, None, b))
+                                         dispatch])
+        .ParameterValidationResults(
+            validationPageContent dispatch configuration.ValidationMessages)
+        .Elt()
 
-let generalPage model dispatch =
+let dependentPage (configuration: Configuration) (dispatch: Message -> unit) =
+    let enumLanguages = List.indexed configuration.Languages
+    let makeRow (p: LanguageParameter) =
+        let firstCell = th [] [text p.Description]
+        let makeCell (lngIdx, language) =
+            let name = (p :> INamedParameter).Name
+            let input =
+                renderParameterInput (new MinimalParameter(p, lngIdx, language))
+                                     (getInputId p (Some language) Dependent)
+                                     (fun s -> SetString (name, Some language, s))
+                                     (fun i -> SetInt32 (name, Some language, i))
+                                     (fun b -> SetBool (name, Some language, b))
+                                     dispatch
+            td [] [input]
+        tr [] [firstCell
+               forEach enumLanguages makeCell]
+    Main.Dependent()
+        .Header(
+            forEach (" "::configuration.Languages) <| fun s -> th [] [text s])
+        .Body(
+            forEach configuration.LanguageDependent makeRow)
+        .ParameterValidationResults(
+            validationPageContent dispatch configuration.ValidationMessages)
+        .Elt()
+
+let generalPage
+        ({ Configuration.Languages = languageNames
+           configurationProjectName = configurationProjectName
+           ValidationMessages = validationMessages })
+        dispatch =
     let removeIdx idx xs =
         List.indexed xs
         |> List.filter (fun (otherIdx, _) -> otherIdx <> idx)
         |> List.map snd
     let languages =
-        match model with
-        | { configuration = Some { Languages = languageNames } } ->
-            let languageCount = List.length languageNames
-            let mayNotRemove = languageCount < 2
-            forEach (List.indexed languageNames) <| fun (idx, langName) ->
-                let mayGoUp = idx > 0
-                let mayGoDown = idx < languageCount - 1
-                li [attr.``class`` "level"] [
-                    div [attr.``class`` "buttons"] [
-                        button [yield on.click <| fun _ -> if mayGoUp
-                                                           then langName::removeIdx idx languageNames
-                                                                |> SetLanguageOrder
-                                                                |> dispatch
-                                                           else ()
-                                yield attr.``classes`` ["button"]
-                                if not mayGoUp then yield attr.disabled "disabled"]
-                               [text "To top"]
-                        button [yield on.click <| fun _ -> if mayGoDown
-                                                           then removeIdx idx languageNames @ [langName]
-                                                                |> SetLanguageOrder
-                                                                |> dispatch
-                                                           else ()
-                                yield attr.``classes`` ["button"]
-                                if not mayGoDown then yield attr.disabled "disabled"]
-                               [text "To bottom"]]
-                    text langName
-                    button [yield on.click <| fun _ -> match removeIdx idx languageNames with
-                                                       | [] -> ()
-                                                       | lessLanguages -> 
-                                                            SetLanguageOrder lessLanguages
+        let languageCount = List.length languageNames
+        let mayNotRemove = languageCount < 2
+        forEach (List.indexed languageNames) <| fun (idx, langName) ->
+            let mayGoUp = idx > 0
+            let mayGoDown = idx < languageCount - 1
+            li [attr.``class`` "level"] [
+                div [attr.``class`` "buttons"] [
+                    button [yield on.click <| fun _ -> if mayGoUp
+                                                       then langName::removeIdx idx languageNames
+                                                            |> SetLanguageOrder
                                                             |> dispatch
-                            yield attr.classes ["button"; "is-danger"]
-                            if mayNotRemove then yield attr.disabled "disabled"]
-                           [text "Remove"]]
-        | { configuration = None } -> Empty
+                                                       else ()
+                            yield attr.``classes`` ["button"]
+                            if not mayGoUp then yield attr.disabled "disabled"]
+                           [text "To top"]
+                    button [yield on.click <| fun _ -> if mayGoDown
+                                                       then removeIdx idx languageNames @ [langName]
+                                                            |> SetLanguageOrder
+                                                            |> dispatch
+                                                       else ()
+                            yield attr.``classes`` ["button"]
+                            if not mayGoDown then yield attr.disabled "disabled"]
+                           [text "To bottom"]]
+                text langName
+                button [yield on.click <| fun _ -> match removeIdx idx languageNames with
+                                                   | [] -> ()
+                                                   | lessLanguages -> 
+                                                        SetLanguageOrder lessLanguages
+                                                        |> dispatch
+                        yield attr.classes ["button"; "is-danger"]
+                        if mayNotRemove then yield attr.disabled "disabled"]
+                       [text "Remove"]]
     Main.General()
-        .ConfigurationProjectName(
-            configurationProjectName model,
-            SetProjectName >> dispatch)
+        .ConfigurationProjectName(configurationProjectName, SetProjectName >> dispatch)
         .Languages(languages)
-        .ParameterValidationResults(model.configuration
-                                    |> (Option.map <| fun { ValidationMessages = m } -> m)
-                                    |> Option.defaultValue []
-                                    |> validationPageContent dispatch )
+        .ParameterValidationResults(validationPageContent dispatch validationMessages)
         .Elt()
 
 let dataPage model (username: string) dispatch =
@@ -522,15 +553,17 @@ let view model dispatch =
             | Some _ ->
                 forEach
                     [(General, configurationProjectName model)
-                     (Common, "Common parameters")]
+                     (Common, "Common Parameters")
+                     (Dependent, "Language Dependent Parameters")]
                     <| fun (page, menuName) ->
                         menuItem model page menuName
         ])
         .Body(
             cond model.page <| function
             | Home -> homePage model dispatch
-            | General -> generalPage model dispatch
-            | Common -> commonPage model dispatch
+            | General -> renderOnlyWithConfiguration generalPage model dispatch
+            | Common -> renderOnlyWithConfiguration commonPage model dispatch
+            | Dependent -> renderOnlyWithConfiguration dependentPage model dispatch
             | Data ->
                 cond model.signedInAs <| function
                 | Some username -> dataPage model username dispatch
