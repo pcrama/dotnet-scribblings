@@ -1,10 +1,10 @@
 * One time: add new template type
-#+begin_src shell
+#+begin_src shell :exports code :results none
   dotnet new -i Bolero.Templates
 #+end_src
 
 * Create demo project
-#+begin_src shell
+#+begin_src shell :exports code :results none
   dotnet new bolero-app -o bolerogator
 #+end_src
 
@@ -18,7 +18,7 @@ Among other output, find server's URL:
 : Now listening on: https://localhost:5001
 
 In emacs:
-#+begin_src elisp :exports code :results none
+#+begin_src emacs-lisp :exports code :results none
   (let* ((window-configuration (current-window-configuration))
          (project "bolerogator")
          (shell-command-buffer-name-async (format "*async watch run %s*" project)))
@@ -28,3 +28,15 @@ In emacs:
       (compilation-shell-minor-mode +1)
       (set-window-configuration window-configuration)))
 #+end_src
+
+* Build for release
+#+begin_src shell :exports code :results none
+  dotnet publish --configuration Release bolerogator.sln
+  (cd src/bolerogator.Server/bin/Release/net6.0/publish/ \
+   && ./bolerogator.Server.exe)
+#+end_src
+
+Initial page load as reported by Edge developer tools: 2.7MB transfer (8.1MB
+of resources); down from 10.2MB transfer (25.1MB of resources) observed with
+src_shell[:exports code]{dotnet run --project src/bolerogator.Server/} (default
+configuration is "Debug", so I'm assuming it was a Debug build).
